@@ -1,0 +1,303 @@
+/*
+ * To change this template, choose Tools | Templates
+ * and open the template in the editor.
+ */
+package org.trusteval.retriever;
+
+/**
+ *
+ * @author Debasis
+ */
+import com.github.junrar.unsigned.UnsignedByte;
+import org.trusteval.evaluator.Evaluator;
+import org.trusteval.feedback.RelevanceModelConditional;
+import org.trusteval.feedback.RelevanceModelIId;
+import org.trusteval.feedback.RetrievedDocTermInfo;
+import org.trusteval.indexing.TrecDocIndexer;
+import java.io.*;
+import java.util.*;
+import org.apache.lucene.document.Document;
+import org.apache.lucene.index.DirectoryReader;
+import org.apache.lucene.index.*;
+import org.apache.lucene.search.*;
+import org.apache.lucene.search.similarities.*;
+import org.apache.lucene.store.*;
+import org.trusteval.feedback.OneDimKDE;
+import org.trusteval.feedback.TwoDimKDE;
+import org.trusteval.trec.TRECQuery;
+import org.trusteval.trec.TRECQueryParser;
+
+/**
+ *
+ * @author Debasis
+ */
+public class TrecDocRetriever {
+
+    TrecDocIndexer indexer;
+    IndexReader reader;
+    IndexSearcher searcher;
+    int numWanted;
+    Properties prop;
+    String runName;
+    String kdeType;
+    boolean postRLMQE;
+    boolean postQERerank;
+    Similarity model;
+    boolean preretievalExpansion;
+
+    public TrecDocRetriever(String propFile) throws Exception {
+        indexer = new TrecDocIndexer(propFile);
+        prop = indexer.getProperties();
+
+        try {
+            File indexDir = indexer.getIndexDir();
+            System.out.println("Running queries against index: " + indexDir.getPath());
+
+            reader = DirectoryReader.open(FSDirectory.open(indexDir.toPath()));
+            searcher = new IndexSearcher(reader);
+
+            String retrieverModel = prop.getProperty("retrieveModel");
+            if (retrieverModel.equals("BM25")) {
+                float k = Float.parseFloat(prop.getProperty("k", "1"));
+                float b = Float.parseFloat(prop.getProperty("b", "0.5f"));
+                this.model = new BM25Similarity(k, b);
+            } else {
+                float lambda = Float.parseFloat(prop.getProperty("lambda", "0.5f"));
+                this.model = new LMJelinekMercerSimilarity(lambda);
+            }
+            searcher.setSimilarity(model);
+
+            numWanted = Integer.parseInt(prop.getProperty("retrieve.num_wanted", "1000"));
+            runName = prop.getProperty("retrieve.runname", "bm");
+
+            kdeType = prop.getProperty("rlm.type", "uni");
+            preretievalExpansion = Boolean.parseBoolean(prop.getProperty("preretievalExpansion", "false"));
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    public Properties getProperties() {
+        return prop;
+    }
+
+    public IndexReader getReader() {
+        return reader;
+    }
+
+    public List<TRECQuery> constructQueries() throws Exception {
+        String queryFile = prop.getProperty("query.file");
+        TRECQueryParser parser = new TRECQueryParser(queryFile, indexer.getAnalyzer(), preretievalExpansion, prop.getProperty("queryMode"), prop.getProperty("weighted"));
+
+        // parser.parse();
+        if (preretievalExpansion) {
+            parser.addExpansionTerms();
+        }
+
+        String collection = prop.getProperty("collection");
+        if (collection.equals("Trec")) {
+            return parser.findQueries(queryFile, prop);
+        } else {
+            return parser.getQueries();
+        }
+    }
+
+    // Computes the similarity of two queries based on KL-divergence
+    // of the estimated relevance models. More precisely, if Q1 and Q2
+    // are two queries, the function computes pi = P(w|Qi,TOP(Qi)) for i=1,2
+    // It then computes KL(p1, p2)
+    public float computeQuerySimilarity(TRECQuery q1, TRECQuery q2, int ntop) throws Exception {
+
+        // Get the top docs for both q1 and q2
+        TopDocs q1_topDocs = searcher.search(q1.getLuceneQueryObj(), ntop);
+        TopDocs q2_topDocs = searcher.search(q2.getLuceneQueryObj(), ntop);
+
+        // Estimate the relevance models for each query and associated top-docs
+        RelevanceModelIId rm_q1 = new RelevanceModelConditional(this, q1, q1_topDocs);
+        RelevanceModelIId rm_q2 = new RelevanceModelConditional(this, q2, q2_topDocs);
+
+        Map<String, RetrievedDocTermInfo> q1_topTermMap = rm_q1.getRetrievedDocsTermStats().getTermStats();
+        Map<String, RetrievedDocTermInfo> q2_topTermMap = rm_q2.getRetrievedDocsTermStats().getTermStats();
+
+        // Merge the two models
+        Map<String, RetrievedDocTermInfo> mergedAvgModel
+                = mergeRelevanceModels(q1_topTermMap, q2_topTermMap);
+        // JS divergence
+        return (klDiv(q1_topTermMap, mergedAvgModel) + klDiv(q2_topTermMap, mergedAvgModel)) / 2;
+    }
+
+    Map<String, RetrievedDocTermInfo> mergeRelevanceModels(
+            Map<String, RetrievedDocTermInfo> q1_topTermMap,
+            Map<String, RetrievedDocTermInfo> q2_topTermMap) {
+
+        float wt = 0;
+        Map<String, RetrievedDocTermInfo> merged_topTermMap = new HashMap<>();
+
+        for (RetrievedDocTermInfo a : q1_topTermMap.values()) {
+            RetrievedDocTermInfo b = q2_topTermMap.get(a.getTerm());
+            wt = a.getWeight();
+            if (b != null) {
+                wt += b.getWeight();
+            }
+
+            a.setWeight(wt / 2);
+            merged_topTermMap.put(a.getTerm(), a);
+        }
+
+        for (RetrievedDocTermInfo a : q2_topTermMap.values()) {
+            RetrievedDocTermInfo b = q1_topTermMap.get(a.getTerm());
+            wt = a.getWeight();
+            if (b != null) {
+                wt += b.getWeight();
+            }
+
+            a.setWeight(wt / 2);
+            merged_topTermMap.put(a.getTerm(), a);
+        }
+
+        return merged_topTermMap;
+    }
+
+    float klDiv(Map<String, RetrievedDocTermInfo> q1_topTermMap, Map<String, RetrievedDocTermInfo> q2_topTermMap) {
+        float kldiv = 0, a_wt, b_wt;
+
+        for (RetrievedDocTermInfo a : q1_topTermMap.values()) {
+            String term = a.getTerm(); // for each term in model the first model
+
+            // Get this term's weight in the second model
+            RetrievedDocTermInfo b = q2_topTermMap.get(term);
+            if (b == null) {
+                continue;
+            }
+
+            a_wt = a.getWeight();
+            b_wt = b.getWeight();
+            kldiv += a_wt * Math.log(a_wt / b_wt);
+        }
+        return kldiv;
+    }
+
+    TopDocs retrieve(TRECQuery query) throws IOException {
+        String clinicalFeedback = prop.getProperty("clinicalFeedback", "false");
+        if (clinicalFeedback.equals("true")) {
+            File clinicalIndex = new File(prop.getProperty("index"));
+            reader = DirectoryReader.open(FSDirectory.open(clinicalIndex.toPath()));
+            searcher = new IndexSearcher(reader);
+            searcher.setSimilarity(model);
+        }
+
+        return searcher.search(query.getLuceneQueryObj(), numWanted);
+    }
+
+    public void retrieveAll() throws Exception {
+        TopDocs topDocs;
+        String resultsFile = prop.getProperty("res.file");
+        FileWriter fw = new FileWriter(resultsFile);
+
+        List<TRECQuery> queries = constructQueries();
+
+        boolean toExpand = Boolean.parseBoolean(prop.getProperty("preretrieval.queryexpansion", "false"));
+        // Expand all queries
+        if (toExpand) {
+            NNQueryExpander nnQexpander = new NNQueryExpander(prop);
+            nnQexpander.expandQueriesWithNN(queries);
+        }
+        int count = 0;
+        for (TRECQuery query : queries) {
+
+            // Print query
+            System.out.println("Executing query: " + query.getLuceneQueryObj());
+            // Retrieve results
+            topDocs = retrieve(query);
+
+            // Apply feedback
+            if (Boolean.parseBoolean(prop.getProperty("feedback")) && topDocs.scoreDocs.length > 0) {
+                topDocs = applyFeedback(query, topDocs);
+            }
+            // Save results
+            saveRetrievedTuples(fw, query, topDocs);
+        }
+
+        fw.close();
+        reader.close();
+
+        if (Boolean.parseBoolean(prop.getProperty("eval"))) {
+            evaluate(prop.getProperty("evalMode"));
+        }
+    }
+
+    public TopDocs applyFeedback(TRECQuery query, TopDocs topDocs) throws Exception {
+        RelevanceModelIId fdbkModel;
+
+        fdbkModel = kdeType.equals("uni") ? new OneDimKDE(this, query, topDocs)
+                : kdeType.equals("bi") ? new TwoDimKDE(this, query, topDocs)
+                : kdeType.equals("rlm_iid") ? new RelevanceModelIId(this, query, topDocs)
+                : new RelevanceModelConditional(this, query, topDocs);
+
+        try {
+            if (kdeType.equals("rlm_conditional") || kdeType.equals("rlm_iid")) {
+                fdbkModel.computeFdbkWeights(prop.getProperty("retrieveMode"));
+            } else {
+                fdbkModel.computeKDE(prop.getProperty("retrieveMode"));
+            }
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return topDocs;
+        }
+        if (Boolean.parseBoolean(prop.getProperty("clarity_compute", "false"))) {
+            if (prop.getProperty("clarity.collmodel", "global").equals("global")) {
+                System.out.println("Clarity: " + fdbkModel.getQueryClarity(reader));
+            } else {
+                System.out.println("Clarity: " + fdbkModel.getQueryClarity());
+            }
+        }
+
+        // Post retrieval query expansion
+        TRECQuery expandedQuery = fdbkModel.expandQuery(prop.getProperty("retrieveMode"), prop.getProperty("weighted"));
+
+        topDocs = searcher.search(expandedQuery.getLuceneQueryObj(), 10);
+        return topDocs;
+    }
+
+    public void evaluate(String evalMode) throws Exception {
+        Evaluator evaluator = new Evaluator(this.getProperties());
+        evaluator.load();
+        if (evalMode.equals("trust")) {
+            evaluator.loadQueryPairs();
+            System.out.println(evaluator.computeTrust());
+        } else {
+            evaluator.fillRelInfo();
+            System.out.println(evaluator.computeAll());
+        }
+    }
+
+    public void saveRetrievedTuples(FileWriter fw, TRECQuery query, TopDocs topDocs) throws Exception {
+        StringBuffer buff = new StringBuffer();
+        ScoreDoc[] hits = topDocs.scoreDocs;
+        for (int i = 0; i < hits.length; ++i) {
+            int docId = hits[i].doc;
+            Document d = searcher.doc(docId);
+            //System.out.println(d.get("id") + " "+docId);
+            buff.append(query.id.trim()).append("\tQ0\t").
+                    append(d.get(TrecDocIndexer.FIELD_ID)).append("\t").
+                    append((i + 1)).append("\t").
+                    append(hits[i].score).append("\t").
+                    append(runName).append("\t").append(reader.document(docId).get("words")).append("\n");
+        }
+        fw.write(buff.toString());
+    }
+
+    public static void main(String[] args) {
+        if (args.length < 1) {
+            args = new String[1];
+            args[0] = "retrieve.properties";
+        }
+
+        try {
+            TrecDocRetriever searcher = new TrecDocRetriever(args[0]);
+            searcher.retrieveAll();
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+    }
+}
