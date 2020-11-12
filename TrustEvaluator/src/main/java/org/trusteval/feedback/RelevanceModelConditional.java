@@ -7,7 +7,7 @@ package org.trusteval.feedback;
 
 import java.util.Map;
 import org.apache.lucene.search.TopDocs;
-import org.trusteval.trec.TRECQuery;
+import org.trusteval.trec.QueryObject;
 import org.trusteval.retriever.TrecDocRetriever;
 
 /**
@@ -16,7 +16,7 @@ import org.trusteval.retriever.TrecDocRetriever;
  */
 public class RelevanceModelConditional extends RelevanceModelIId {
 
-    public RelevanceModelConditional(TrecDocRetriever retriever, TRECQuery trecQuery, TopDocs topDocs) throws Exception {
+    public RelevanceModelConditional(TrecDocRetriever retriever, QueryObject trecQuery, TopDocs topDocs) throws Exception {
         super(retriever, trecQuery, topDocs);
     }
     

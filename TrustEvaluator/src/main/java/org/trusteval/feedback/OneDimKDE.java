@@ -13,7 +13,7 @@ import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.TopDocs;
 import org.trusteval.retriever.NNQueryExpander;
 import org.trusteval.retriever.TrecDocRetriever;
-import org.trusteval.trec.TRECQuery;
+import org.trusteval.trec.QueryObject;
 import org.trusteval.wvec.WordVec;
 import org.trusteval.wvec.WordVecs;
 
@@ -32,7 +32,7 @@ public class OneDimKDE extends RelevanceModelIId {
     boolean autoParams;
     NNQueryExpander nnQexpander;
     
-    public OneDimKDE(TrecDocRetriever retriever, TRECQuery trecQuery, TopDocs topDocs) throws Exception {
+    public OneDimKDE(TrecDocRetriever retriever, QueryObject trecQuery, TopDocs topDocs) throws Exception {
         super(retriever, trecQuery, topDocs);
         
         toExpand = Boolean.parseBoolean(prop.getProperty("kde.queryexpansion", "false"));        

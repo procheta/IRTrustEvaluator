@@ -8,7 +8,7 @@ package org.trusteval.feedback;
 import java.util.Map;
 import org.apache.lucene.search.TopDocs;
 import org.trusteval.retriever.TrecDocRetriever;
-import org.trusteval.trec.TRECQuery;
+import org.trusteval.trec.QueryObject;
 import org.trusteval.wvec.WordVec;
 import org.trusteval.wvec.WordVecs;
 /**
@@ -17,7 +17,7 @@ import org.trusteval.wvec.WordVecs;
  */
 public class TwoDimKDE extends OneDimKDE {
 
-    public TwoDimKDE(TrecDocRetriever retriever, TRECQuery trecQuery, TopDocs topDocs) throws Exception {
+    public TwoDimKDE(TrecDocRetriever retriever, QueryObject trecQuery, TopDocs topDocs) throws Exception {
         super(retriever, trecQuery, topDocs);
     }
 

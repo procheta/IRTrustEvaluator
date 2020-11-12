@@ -21,7 +21,7 @@ import org.apache.lucene.search.TermQuery;
  *
  * @author Debasis
  */
-public class TRECQuery {
+public class QueryObject {
     public String       id;
     public String       title;
     public String       desc;
@@ -33,9 +33,9 @@ public class TRECQuery {
         return luceneQuery.toString();
     }
 
-    public TRECQuery() {}
+    public QueryObject() {}
     
-    public TRECQuery(TRECQuery that) { // copy constructor
+    public QueryObject(QueryObject that) { // copy constructor
         this.id = that.id;
         this.title = that.title;
         this.desc = that.desc;

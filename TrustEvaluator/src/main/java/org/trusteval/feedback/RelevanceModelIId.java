@@ -23,7 +23,7 @@ import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.search.TopDocs;
 import org.trusteval.indexing.TrecDocIndexer;
-import org.trusteval.trec.TRECQuery;
+import org.trusteval.trec.QueryObject;
 import org.trusteval.retriever.TrecDocRetriever;
 import org.trusteval.wvec.WordVec;
 import org.trusteval.wvec.WordVecs;
@@ -43,7 +43,7 @@ class KLDivScoreComparator implements Comparator<ScoreDoc> {
 public class RelevanceModelIId {
 
     TrecDocRetriever retriever;
-    TRECQuery trecQuery;
+    QueryObject trecQuery;
     TopDocs topDocs;
     Properties prop;
     float mixingLambda;
@@ -57,7 +57,7 @@ public class RelevanceModelIId {
     QueryVecComposer composer;
     static final float TERM_SEL_DF_THRESH = 0.8f;
 
-    public RelevanceModelIId(TrecDocRetriever retriever, TRECQuery trecQuery, TopDocs topDocs) throws Exception {
+    public RelevanceModelIId(TrecDocRetriever retriever, QueryObject trecQuery, TopDocs topDocs) throws Exception {
         this.prop = retriever.getProperties();
         this.retriever = retriever;
         this.trecQuery = trecQuery;
@@ -229,7 +229,7 @@ public class RelevanceModelIId {
 
     // Implement post-RLM query expansion. Set the term weights
     // according to the values of f(w).
-    public TRECQuery expandQuery(String retrieveMode, String weighted) throws Exception {
+    public QueryObject expandQuery(String retrieveMode, String weighted) throws Exception {
 
         // The calling sequence has to make sure that the top docs are already
         // reranked by KL-div
@@ -237,7 +237,7 @@ public class RelevanceModelIId {
         // for QE.
         computeFdbkWeights(retrieveMode);
 
-        TRECQuery expandedQuery = new TRECQuery(this.trecQuery);
+        QueryObject expandedQuery = new QueryObject(this.trecQuery);
         Set<Term> origTerms = new HashSet<Term>();
         //this.trecQuery.luceneQuery.extractTerms(origTerms);
         expandedQuery.luceneQuery = new BooleanQuery();

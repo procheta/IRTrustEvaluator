@@ -19,7 +19,7 @@ import org.apache.lucene.search.BooleanClause;
 import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.TermQuery;
-import org.trusteval.trec.TRECQuery;
+import org.trusteval.trec.QueryObject;
 import org.trusteval.wvec.WordVec;
 import org.trusteval.wvec.WordVecs;
 
@@ -74,7 +74,7 @@ public class NNQueryExpander {
         this.numTerms = numTerms;
     }
     
-    public void expandQuery(TRECQuery query) {
+    public void expandQuery(QueryObject  query) {
         // Collect the origTerms
         Query luceneQry = query.getLuceneQueryObj();
         System.out.println("Composing query: " + luceneQry.toString());
@@ -144,8 +144,8 @@ public class NNQueryExpander {
         System.out.println();
     }
     
-    public void expandQueriesWithNN(List<TRECQuery> queries) {
-        for (TRECQuery q : queries) {
+    public void expandQueriesWithNN(List<QueryObject > queries) {
+        for (QueryObject  q : queries) {
             expandQuery(q);
         }
     }

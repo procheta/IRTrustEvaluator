@@ -36,12 +36,12 @@ public class TRECQueryParser extends DefaultHandler {
 
     StringBuffer buff;      // Accumulation buffer for storing the current topic
     String fileName;
-    TRECQuery query;
+    QueryObject  query;
     Analyzer analyzer;
     StandardQueryParser queryParser;
     ArrayList<String> expansionTerms;
     boolean expansionflag;
-    public List<TRECQuery> queries;
+    public List<QueryObject> queries;
     final static String[] tags = {"id", "title", "desc", "narr"};
     String queryMode;
     String weighted;
@@ -71,7 +71,7 @@ public class TRECQueryParser extends DefaultHandler {
         saxParser.parse(fileName, this);
     }
 
-    public List<TRECQuery> getQueries() {
+    public List<QueryObject> getQueries() {
         return queries;
     }
 
@@ -79,7 +79,7 @@ public class TRECQueryParser extends DefaultHandler {
     public void startElement(String uri, String localName, String qName, Attributes attributes) throws SAXException {
         try {
             if (qName.equalsIgnoreCase("top")) {
-                query = new TRECQuery();
+                query = new QueryObject();
                 queries.add(query);
             } else {
                 buff = new StringBuffer();
@@ -89,7 +89,7 @@ public class TRECQueryParser extends DefaultHandler {
         }
     }
 
-    public Query constructFlatQuery(TRECQuery trecQuery) {
+    public Query constructFlatQuery(QueryObject  trecQuery) {
 
         String queryText = "";
         String st[] = trecQuery.title.split("\\s+");
@@ -120,7 +120,7 @@ public class TRECQueryParser extends DefaultHandler {
         return query;
     }
 
-    public Query constructStructuredQuery(TRECQuery trecQuery) {
+    public Query constructStructuredQuery(QueryObject  trecQuery) {
         String st[] = trecQuery.title.split("\\s+");
         BooleanQuery query = new BooleanQuery();
         for (String s : st) {
@@ -184,7 +184,7 @@ public class TRECQueryParser extends DefaultHandler {
 
     }
 
-    public Query constructLuceneQueryObj(TRECQuery trecQuery) throws QueryNodeException {
+    public Query constructLuceneQueryObj(QueryObject  trecQuery) throws QueryNodeException {
 
         if (queryMode.equals("flat")) {
             return constructFlatQuery(trecQuery);
@@ -243,9 +243,9 @@ public class TRECQueryParser extends DefaultHandler {
 
     public void addExpansionTerms() throws QueryNodeException {
 
-        ArrayList<TRECQuery> modifiedQueries = new ArrayList<>();
+        ArrayList<Query> modifiedQueries = new ArrayList<>();
         for (int i = 0; i < queries.size(); i++) {
-            TRECQuery tq = queries.get(i);
+            QueryObject  tq = queries.get(i);
             BooleanQuery b = (BooleanQuery) tq.luceneQuery;
             String expansionString = expansionTerms.get(i);
             String st[] = expansionString.split("\\s+");
@@ -298,15 +298,15 @@ public class TRECQueryParser extends DefaultHandler {
         return geneexpansion;
     }
 
-    public ArrayList<TRECQuery> findQueries(String fileName, Properties prop) throws FileNotFoundException, IOException, Exception {
+    public ArrayList<QueryObject> findQueries(String fileName, Properties prop) throws FileNotFoundException, IOException, Exception {
         FileReader fr = new FileReader(new File(fileName));
         BufferedReader br = new BufferedReader(fr);
         String line = br.readLine();
-        ArrayList<TRECQuery> tqs = new ArrayList<>();
+        ArrayList<QueryObject> tqs = new ArrayList<>();
         while (line != null) {
             String st[] = line.split(";");
             String query = analyze(st[1], "stop.txt");
-            TRECQuery tq = new TRECQuery();
+            QueryObject  tq = new QueryObject ();
             tq.id = st[0];
             st = query.split("\\s+");
             BooleanQuery bq = new BooleanQuery();
@@ -340,7 +340,7 @@ public class TRECQueryParser extends DefaultHandler {
             TRECQueryParser parser = new TRECQueryParser(queryFile, new EnglishAnalyzer(), true, prop.getProperty("queryMode"), prop.getProperty("weigted"));
             parser.extractExpansionTerms();
             /* parser.parse();
-            for (TRECQuery q : parser.queries) {
+            for (Query q : parser.queries) {
                 System.out.println(q);
             }*/
         } catch (Exception ex) {

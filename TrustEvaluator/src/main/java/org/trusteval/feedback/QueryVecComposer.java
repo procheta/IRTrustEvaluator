@@ -9,7 +9,7 @@ import java.util.HashSet;
 import java.util.Properties;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.Query;
-import org.trusteval.trec.TRECQuery;
+import org.trusteval.trec.QueryObject;
 import org.trusteval.wvec.WordVec;
 import org.trusteval.wvec.WordVecs;
 
@@ -20,14 +20,14 @@ import org.trusteval.wvec.WordVecs;
  * Expands a query representation by adding the word vectors pairwise
  */
 public class QueryVecComposer {
-    TRECQuery trecQuery;
+    QueryObject  trecQuery;
     WordVecs wvecs;
     String[] termArray;
     QueryWordVecs qvecs;
     HashSet<Term> origTerms;
     Properties prop;
     
-    public QueryVecComposer(TRECQuery trecQuery, WordVecs wvecs, Properties prop) {
+    public QueryVecComposer(QueryObject  trecQuery, WordVecs wvecs, Properties prop) {
         this.trecQuery = trecQuery;
         this.wvecs = wvecs;
         this.prop = prop;

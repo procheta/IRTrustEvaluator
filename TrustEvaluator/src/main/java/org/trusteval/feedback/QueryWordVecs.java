@@ -10,7 +10,7 @@ import java.util.HashSet;
 import java.util.List;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.Query;
-import org.trusteval.trec.TRECQuery;
+import org.trusteval.trec.QueryObject;
 import org.trusteval.wvec.WordVec;
 import org.trusteval.wvec.WordVecs;
 
@@ -19,11 +19,11 @@ import org.trusteval.wvec.WordVecs;
  * @author Debasis
  */
 public class QueryWordVecs {
-    TRECQuery query;
+    QueryObject  query;
     List<WordVec> wvecs;
     WordVecs allwvecs;
     
-    public QueryWordVecs(TRECQuery query, WordVecs allwVecs) {
+    public QueryWordVecs(QueryObject  query, WordVecs allwVecs) {
         this.query = query;
         this.allwvecs = allwVecs;
         wvecs = new ArrayList<>();

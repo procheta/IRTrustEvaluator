@@ -24,6 +24,20 @@ import org.apache.lucene.index.*;
  *
  * @author Debasis
  */
+class QueryPair {
+
+    String query1;
+    String query2;
+    String label;
+
+    public QueryPair(String q1, String q2, String label) {
+        query1 = q1;
+        query2 = q2;
+        this.label = label;
+    }
+
+}
+
 class PerQueryRelDocs {
 
     String qid;
@@ -267,7 +281,7 @@ class RetrievedResults implements Comparable<RetrievedResults> {
         for (int i = 0; i < rtuples.size(); i++) {
             String docid = rtuples.get(i).docName;
             docIds.add(docid);
-            docid = rtuples.get(i).docName;
+            docid = rtuple2.rtuples.get(i).docName;
             docIds2.add(docid);
         }
 
@@ -277,15 +291,23 @@ class RetrievedResults implements Comparable<RetrievedResults> {
                 numOverLap++;
             }
         }
-        return (double) numOverLap / (docIds.size() + docIds2.size() - numOverLap);
+        double jacc = (double) numOverLap / (docIds.size() + docIds2.size() - numOverLap);
+        return jacc;
+    }
+    
+    double computeInverseJaccard(RetrievedResults rtuple2){
+    
+     return (1- computeJaccard(rtuple2));
     }
 
     public HashMap<String, Double> computeWordDistribution(ArrayList<String> contentArray) {
 
         HashMap<String, Double> wordCountMap = new HashMap<String, Double>();
+        double totalSumFreq = 0;
         for (int i = 0; i < contentArray.size(); i++) {
             String content = contentArray.get(i);
             String words[] = content.split("\\s+");
+            totalSumFreq += words.length;
             for (String word : words) {
                 if (wordCountMap.containsKey(word)) {
                     wordCountMap.put(word, wordCountMap.get(word) + 1);
@@ -294,15 +316,15 @@ class RetrievedResults implements Comparable<RetrievedResults> {
                 }
             }
         }
-        
-       Iterator it = wordCountMap.keySet().iterator();
+
+        Iterator it = wordCountMap.keySet().iterator();
         double n = wordCountMap.size();
-        
-        while(it.hasNext()){
+
+        while (it.hasNext()) {
             String st = (String) it.next();
-            wordCountMap.put(st, wordCountMap.get(st)/n);
+            wordCountMap.put(st, wordCountMap.get(st) / totalSumFreq);
         }
-        
+
         return wordCountMap;
     }
 
@@ -310,12 +332,12 @@ class RetrievedResults implements Comparable<RetrievedResults> {
 
         Iterator it = wordCountMap1.keySet().iterator();
         double kldiv = 0;
-        
-        while(it.hasNext()){
+
+        while (it.hasNext()) {
             String key = (String) it.next();
-            if(wordCountMap2.containsKey(key)){
-                 kldiv += wordCountMap1.get(key)* Math.log(wordCountMap1.get(key)/wordCountMap2.get(key));        
-                         //
+            if (wordCountMap2.containsKey(key)) {
+                kldiv += wordCountMap1.get(key) * Math.log(wordCountMap1.get(key) / wordCountMap2.get(key));
+                //
             }
         }
         return kldiv;
@@ -341,6 +363,12 @@ class RetrievedResults implements Comparable<RetrievedResults> {
         double kldiv = computeKLDivergence(wordCountMap1, wordCountMap2);
         return kldiv;
     }
+    
+    public double computeInverseOverlap(RetrievedResults rtuple2){
+    
+        return (1-computeOverlap(rtuple2));
+    
+    }
 
     double computeWeightedJaccard(RetrievedResults rtuple2) {
 
@@ -353,8 +381,9 @@ class RetrievedResults implements Comparable<RetrievedResults> {
             docIds.add(docid);
             if (!docNames.contains(docid)) {
                 docIdUnion.add(docid);
+                docNames.add(docid);
             }
-            docid = rtuples.get(i).docName;
+            docid = rtuple2.rtuples.get(i).docName;
             docIds2.add(docid);
         }
         double wJacc = 0;
@@ -368,10 +397,15 @@ class RetrievedResults implements Comparable<RetrievedResults> {
             if (rank2 == -1) {
                 rank1 = 11;
             }
-            wJacc += Math.exp((rank1 - rank2) * (rank1 - rank2));
+            wJacc += Math.exp(-((rank1 - rank2) * (rank1 - rank2)));
         }
         wJacc /= docIdUnion.size();
         return wJacc;
+    }
+
+    public double computeInverseWeightedJaccard(RetrievedResults rtuple2) {
+
+        return (1-computeWeightedJaccard(rtuple2));
     }
 
     @Override
@@ -433,27 +467,36 @@ class AllRetrievedResults {
         this.allRelInfo = relInfo;
     }
 
-    public String computeTrustMetrcs(ArrayList<String> queryPairs) {
+    public String computeTrustMetrcs(ArrayList<QueryPair> queryPairs) {
         StringBuffer buff = new StringBuffer();
         double avgJaccard = 0;
         double avgWeightedJaccard = 0;
         double contentMetric = 0;
         for (int i = 0; i < queryPairs.size(); i++) {
-            String pair = queryPairs.get(i);
-            String words[] = pair.split("#");
-            RetrievedResults r1 = allRetMap.get(words[0]);
-            RetrievedResults r2 = allRetMap.get(words[1]);
-            try{
-            avgJaccard += r1.computeJaccard(r2);
-            avgWeightedJaccard += r1.computeWeightedJaccard(r2);
-            contentMetric += r1.computeOverlap(r2);
-            }catch(Exception e){}
+            String q1 = queryPairs.get(i).query1;
+            String q2 = queryPairs.get(i).query2;
+            String label = queryPairs.get(i).label;
+            RetrievedResults r1 = allRetMap.get(q1);
+            RetrievedResults r2 = allRetMap.get(q2);
+            try {
+                if (label.equals("1")) {
+                    avgJaccard += r1.computeJaccard(r2);
+                    avgWeightedJaccard += r1.computeWeightedJaccard(r2);
+                    contentMetric += r1.computeOverlap(r2);
+                }else{
+                     avgJaccard += r1.computeInverseJaccard(r2);
+                    avgWeightedJaccard += r1.computeInverseWeightedJaccard(r2);
+                    contentMetric += r1.computeInverseOverlap(r2);
+                }
+                
+            } catch (Exception e) {
+            }
         }
 
         buff.append("Avg Jaccard:\t").append(avgJaccard / (double) queryPairs.size()).append("\n");
         buff.append("Avg Weighted Jaccard:\t").append(avgWeightedJaccard / (double) queryPairs.size()).append("\n");
         buff.append("Avg Content Sim:\t").append(contentMetric / (double) queryPairs.size()).append("\n");
-     
+
         return buff.toString();
     }
 
@@ -503,7 +546,8 @@ public class Evaluator {
     AllRetrievedResults retRcds;
     static boolean graded;
     static int threshold;
-    ArrayList<String> queryPairs;
+    ArrayList<QueryPair> queryPairs;
+    String queryPairFile;
 
     public Evaluator(String qrelsFile, String resFile) {
         relRcds = new AllRelRcds(qrelsFile);
@@ -523,6 +567,7 @@ public class Evaluator {
         }
         relRcds = new AllRelRcds(qrelsFile);
         retRcds = new AllRetrievedResults(resFile);
+        queryPairFile = prop.getProperty("querypairs.file");
     }
 
     public void load() throws Exception {
@@ -535,13 +580,15 @@ public class Evaluator {
     }
 
     public void loadQueryPairs() throws IOException {
-        FileReader fr = new FileReader(new File("C://Users//Procheta//Downloads/robust-uqv.txt"));
+        FileReader fr = new FileReader(new File(queryPairFile));
         BufferedReader br = new BufferedReader(fr);
 
         String line = br.readLine();
         String prevLine = line;
         double avgLength = 0;
         int lineCount = 0;
+
+        ArrayList<QueryPair> querypairs = new ArrayList<>();
 
         HashMap<String, ArrayList<String>> idMap = new HashMap<>();
         while (line != null) {
@@ -558,7 +605,6 @@ public class Evaluator {
             line = br.readLine();
         }
         Iterator it = idMap.keySet().iterator();
-        ArrayList<String> idPairs = new ArrayList<>();
         while (it.hasNext()) {
             String st = (String) it.next();
             ArrayList<String> ids = idMap.get(st);
@@ -567,11 +613,11 @@ public class Evaluator {
                     String pair1 = ids.get(i);
                     String pair2 = ids.get(j);
                     String pair = pair1 + "#" + pair2;
-                    idPairs.add(pair);
+                    QueryPair qp = new QueryPair(pair1, pair2, "0");
+                    queryPairs.add(qp);
                 }
             }
         }
-        this.queryPairs = idPairs;
     }
 
     public String computeAll() {

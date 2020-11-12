@@ -24,7 +24,7 @@ import org.apache.lucene.search.similarities.*;
 import org.apache.lucene.store.*;
 import org.trusteval.feedback.OneDimKDE;
 import org.trusteval.feedback.TwoDimKDE;
-import org.trusteval.trec.TRECQuery;
+import org.trusteval.trec.QueryObject;
 import org.trusteval.trec.TRECQueryParser;
 
 /**
@@ -85,7 +85,7 @@ public class TrecDocRetriever {
         return reader;
     }
 
-    public List<TRECQuery> constructQueries() throws Exception {
+    public List<QueryObject> constructQueries() throws Exception {
         String queryFile = prop.getProperty("query.file");
         TRECQueryParser parser = new TRECQueryParser(queryFile, indexer.getAnalyzer(), preretievalExpansion, prop.getProperty("queryMode"), prop.getProperty("weighted"));
 
@@ -106,7 +106,7 @@ public class TrecDocRetriever {
     // of the estimated relevance models. More precisely, if Q1 and Q2
     // are two queries, the function computes pi = P(w|Qi,TOP(Qi)) for i=1,2
     // It then computes KL(p1, p2)
-    public float computeQuerySimilarity(TRECQuery q1, TRECQuery q2, int ntop) throws Exception {
+    public float computeQuerySimilarity(QueryObject q1, QueryObject q2, int ntop) throws Exception {
 
         // Get the top docs for both q1 and q2
         TopDocs q1_topDocs = searcher.search(q1.getLuceneQueryObj(), ntop);
@@ -177,14 +177,7 @@ public class TrecDocRetriever {
         return kldiv;
     }
 
-    TopDocs retrieve(TRECQuery query) throws IOException {
-        String clinicalFeedback = prop.getProperty("clinicalFeedback", "false");
-        if (clinicalFeedback.equals("true")) {
-            File clinicalIndex = new File(prop.getProperty("index"));
-            reader = DirectoryReader.open(FSDirectory.open(clinicalIndex.toPath()));
-            searcher = new IndexSearcher(reader);
-            searcher.setSimilarity(model);
-        }
+    TopDocs retrieve(QueryObject query) throws IOException {
 
         return searcher.search(query.getLuceneQueryObj(), numWanted);
     }
@@ -194,7 +187,7 @@ public class TrecDocRetriever {
         String resultsFile = prop.getProperty("res.file");
         FileWriter fw = new FileWriter(resultsFile);
 
-        List<TRECQuery> queries = constructQueries();
+        List<QueryObject> queries = constructQueries();
 
         boolean toExpand = Boolean.parseBoolean(prop.getProperty("preretrieval.queryexpansion", "false"));
         // Expand all queries
@@ -203,10 +196,10 @@ public class TrecDocRetriever {
             nnQexpander.expandQueriesWithNN(queries);
         }
         int count = 0;
-        for (TRECQuery query : queries) {
+        for (QueryObject query : queries) {
 
             // Print query
-            System.out.println("Executing query: " + query.getLuceneQueryObj());
+           // System.out.println("Executing query: " + query.getLuceneQueryObj());
             // Retrieve results
             topDocs = retrieve(query);
 
@@ -226,7 +219,7 @@ public class TrecDocRetriever {
         }
     }
 
-    public TopDocs applyFeedback(TRECQuery query, TopDocs topDocs) throws Exception {
+    public TopDocs applyFeedback(QueryObject query, TopDocs topDocs) throws Exception {
         RelevanceModelIId fdbkModel;
 
         fdbkModel = kdeType.equals("uni") ? new OneDimKDE(this, query, topDocs)
@@ -253,7 +246,7 @@ public class TrecDocRetriever {
         }
 
         // Post retrieval query expansion
-        TRECQuery expandedQuery = fdbkModel.expandQuery(prop.getProperty("retrieveMode"), prop.getProperty("weighted"));
+        QueryObject expandedQuery = fdbkModel.expandQuery(prop.getProperty("retrieveMode"), prop.getProperty("weighted"));
 
         topDocs = searcher.search(expandedQuery.getLuceneQueryObj(), 10);
         return topDocs;
@@ -271,7 +264,7 @@ public class TrecDocRetriever {
         }
     }
 
-    public void saveRetrievedTuples(FileWriter fw, TRECQuery query, TopDocs topDocs) throws Exception {
+    public void saveRetrievedTuples(FileWriter fw, QueryObject query, TopDocs topDocs) throws Exception {
         StringBuffer buff = new StringBuffer();
         ScoreDoc[] hits = topDocs.scoreDocs;
         for (int i = 0; i < hits.length; ++i) {
