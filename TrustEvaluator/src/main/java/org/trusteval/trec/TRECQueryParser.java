@@ -43,18 +43,22 @@ public class TRECQueryParser extends DefaultHandler {
     boolean expansionflag;
     public List<QueryObject> queries;
     final static String[] tags = {"id", "title", "desc", "narr"};
-    String queryMode;
-    String weighted;
+    String fieldName;
+    
+    
+    public TRECQueryParser(){
+    
+    
+    }
 
-    public TRECQueryParser(String fileName, Analyzer analyzer, boolean expansionFlag, String queryMode, String weighted) throws SAXException, FileNotFoundException, Exception {
+    public TRECQueryParser(String fileName, Analyzer analyzer, boolean expansionFlag, String fieldName) throws SAXException, FileNotFoundException, Exception {
         this.fileName = fileName;
         this.analyzer = analyzer;
         buff = new StringBuffer();
         queries = new LinkedList<>();
         queryParser = new StandardQueryParser(analyzer);
         this.expansionflag = expansionFlag;
-        this.queryMode = queryMode;
-        this.weighted = weighted;
+        this.fieldName = fieldName;
         if (this.expansionflag == true) {
             expansionTerms = extractExpansionTerms();
         }
@@ -110,7 +114,7 @@ public class TRECQueryParser extends DefaultHandler {
         st = queryText.split("\\s+");
         BooleanQuery query = new BooleanQuery();
         for (String s : st) {
-            Term term1 = new Term(TrecDocIndexer.ALL_STR, s);
+            Term term1 = new Term(fieldName, s);
             //create the term query object
             Query query1 = new TermQuery(term1);
             //query1.setBoost(1.2f);
@@ -120,80 +124,13 @@ public class TRECQueryParser extends DefaultHandler {
         return query;
     }
 
-    public Query constructStructuredQuery(QueryObject  trecQuery) {
-        String st[] = trecQuery.title.split("\\s+");
-        BooleanQuery query = new BooleanQuery();
-        for (String s : st) {
-
-            Term term1 = new Term(TrecDocIndexer.ARTICLE_TITLE, s);
-            //create the term query object
-            Query query1 = new TermQuery(term1);
-            if (weighted.equals("true")) {
-                query1.setBoost(.2f);
-            }
-            query.add(query1, BooleanClause.Occur.SHOULD);
-        }
-
-        st = trecQuery.narr.split("\\s+");
-        for (String s : st) {
-            Term term1 = new Term(TrecDocIndexer.ABSTRACT_TEXT, s);
-            //create the term query object
-            Query query1 = new TermQuery(term1);
-            if (weighted.equals("true")) {
-                query1.setBoost(.1f);
-            }
-            query.add(query1, BooleanClause.Occur.SHOULD);
-        }
-        st = trecQuery.desc.split("\\s+");
-        for (String s : st) {
-
-            Term term1 = new Term(TrecDocIndexer.MESH_HEADING, s);
-            //create the term query object
-            Query query1 = new TermQuery(term1);
-            if (weighted.equals("true")) {
-                query1.setBoost(.1f);
-            }
-            query.add(query1, BooleanClause.Occur.SHOULD);
-        }
-        st = trecQuery.desc.split("\\s+");
-        for (String s : st) {
-
-            Term term1 = new Term(TrecDocIndexer.ABSTRACT_TEXT, s);
-            //create the term query object
-            Query query1 = new TermQuery(term1);
-            if (weighted.equals("true")) {
-                query1.setBoost(.3f);
-            }
-            query.add(query1, BooleanClause.Occur.SHOULD);
-        }
-        st = trecQuery.title.split("\\s+");
-        for (String s : st) {
-
-            Term term1 = new Term(TrecDocIndexer.ABSTRACT_TEXT, s);
-            //create the term query object
-            Query query1 = new TermQuery(term1);
-            if (weighted.equals("true")) {
-                query1.setBoost(.3f);
-
-            }
-            query.add(query1, BooleanClause.Occur.SHOULD);
-        }
-
-        //System.out.println("The query is "+query);
-        return query;
-
-    }
-
+  
     public Query constructLuceneQueryObj(QueryObject  trecQuery) throws QueryNodeException {
-
-        if (queryMode.equals("flat")) {
+        
             return constructFlatQuery(trecQuery);
-        } else {
-            return constructStructuredQuery(trecQuery);
-        }
     }
 
-    String analyze(String query, String stopFileName) throws Exception {
+    public String analyze(String query, String stopFileName) throws Exception {
         StringBuffer buff = new StringBuffer();
         TokenStream stream = new EnglishAnalyzer(StopFilter.makeStopSet(buildStopwordList(stopFileName))).tokenStream("dummy", new StringReader(query));
         CharTermAttribute termAtt = stream.addAttribute(CharTermAttribute.class);
@@ -256,9 +193,9 @@ public class TRECQueryParser extends DefaultHandler {
 
                     //create the term query object
                     Query query1 = new TermQuery(term1);
-                    if (weighted.equals("true")) {
+                   // if (weighted.equals("true")) {
                         query1.setBoost(0.05f);
-                    }
+                    //}
                     b.add(query1, BooleanClause.Occur.SHOULD);
 
                 } catch (Exception e) {
@@ -311,7 +248,53 @@ public class TRECQueryParser extends DefaultHandler {
             st = query.split("\\s+");
             BooleanQuery bq = new BooleanQuery();
             for (String s : st) {
-                Term term1 = new Term("words", s);
+                Term term1 = new Term(fieldName, s);
+                //create the term query object
+                Query query1 = new TermQuery(term1);
+                //query1.setBoost(1.2f);
+                bq.add(query1, BooleanClause.Occur.SHOULD);
+            }
+
+            tq.luceneQuery = bq;
+            
+            tqs.add(tq);
+            line = br.readLine();
+        }
+        return tqs;
+    }
+    
+    public ArrayList<QueryObject> loadMSMarcoQueries(String fileName, Properties prop) throws FileNotFoundException, IOException, Exception {
+        FileReader fr = new FileReader(new File(fileName));
+        BufferedReader br = new BufferedReader(fr);
+        String line = br.readLine();
+        ArrayList<QueryObject> tqs = new ArrayList<>();
+        int count = 0;
+        while (line != null) {
+            String st[] = line.split(",");
+            String query = analyze(st[0], "stop.txt");
+            QueryObject  tq = new QueryObject ();
+            tq.id = String.valueOf(count++);
+            st = query.split("\\s+");
+            BooleanQuery bq = new BooleanQuery();
+            for (String s : st) {
+                Term term1 = new Term(fieldName, s);
+                //create the term query object
+                Query query1 = new TermQuery(term1);
+                //query1.setBoost(1.2f);
+                bq.add(query1, BooleanClause.Occur.SHOULD);
+            }
+
+            tq.luceneQuery = bq;
+            
+            tqs.add(tq);
+            
+            query = analyze(st[2], "stop.txt");
+            tq = new QueryObject ();
+            tq.id = String.valueOf(count++);
+            st = query.split("\\s+");
+            bq = new BooleanQuery();
+            for (String s : st) {
+                Term term1 = new Term(fieldName, s);
                 //create the term query object
                 Query query1 = new TermQuery(term1);
                 //query1.setBoost(1.2f);
@@ -337,7 +320,7 @@ public class TRECQueryParser extends DefaultHandler {
             prop.load(new FileReader(args[0]));
             String queryFile = prop.getProperty("query.file");
 
-            TRECQueryParser parser = new TRECQueryParser(queryFile, new EnglishAnalyzer(), true, prop.getProperty("queryMode"), prop.getProperty("weigted"));
+            TRECQueryParser parser = new TRECQueryParser(queryFile, new EnglishAnalyzer(), true, prop.getProperty("fieldName"));
             parser.extractExpansionTerms();
             /* parser.parse();
             for (Query q : parser.queries) {

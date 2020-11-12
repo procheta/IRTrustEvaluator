@@ -87,7 +87,7 @@ public class TrecDocRetriever {
 
     public List<QueryObject> constructQueries() throws Exception {
         String queryFile = prop.getProperty("query.file");
-        TRECQueryParser parser = new TRECQueryParser(queryFile, indexer.getAnalyzer(), preretievalExpansion, prop.getProperty("queryMode"), prop.getProperty("weighted"));
+        TRECQueryParser parser = new TRECQueryParser(queryFile, indexer.getAnalyzer(), preretievalExpansion, prop.getProperty("fieldName"));
 
         // parser.parse();
         if (preretievalExpansion) {
@@ -97,7 +97,9 @@ public class TrecDocRetriever {
         String collection = prop.getProperty("collection");
         if (collection.equals("Trec")) {
             return parser.findQueries(queryFile, prop);
-        } else {
+        } else  if (collection.equals("MSMARCO")) {
+            return parser.loadMSMarcoQueries(runName, prop);
+        }else{
             return parser.getQueries();
         }
     }
@@ -255,8 +257,13 @@ public class TrecDocRetriever {
     public void evaluate(String evalMode) throws Exception {
         Evaluator evaluator = new Evaluator(this.getProperties());
         evaluator.load();
+        String collection = prop.getProperty("collection");
         if (evalMode.equals("trust")) {
-            evaluator.loadQueryPairs();
+             if (collection.equals("Trec")) {
+            evaluator.loadQueryPairsTREC();
+             }else{
+               evaluator.loadQueryPairsMSMARCO();
+             }
             System.out.println(evaluator.computeTrust());
         } else {
             evaluator.fillRelInfo();

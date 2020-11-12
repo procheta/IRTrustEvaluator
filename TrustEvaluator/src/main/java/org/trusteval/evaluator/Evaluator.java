@@ -19,6 +19,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.TreeMap;
 import org.apache.lucene.index.*;
+import org.trusteval.trec.TRECQueryParser;
 
 /**
  *
@@ -343,12 +344,14 @@ class RetrievedResults implements Comparable<RetrievedResults> {
         return kldiv;
     }
 
-    double computeOverlap(RetrievedResults rtuple2) {
+    double computeOverlap(RetrievedResults rtuple2) throws Exception {
 
         ArrayList<String> contentArray = new ArrayList<>();
+        TRECQueryParser tqp = new TRECQueryParser();
         for (int i = 0; i < rtuples.size(); i++) {
             String docid = rtuples.get(i).docName;
             String content = rtuples.get(i).content;
+            content = tqp.analyze(content,"stop.txt");
             contentArray.add(content);
         }
         HashMap<String, Double> wordCountMap1 = computeWordDistribution(contentArray);
@@ -364,7 +367,7 @@ class RetrievedResults implements Comparable<RetrievedResults> {
         return kldiv;
     }
     
-    public double computeInverseOverlap(RetrievedResults rtuple2){
+    public double computeInverseOverlap(RetrievedResults rtuple2) throws Exception{
     
         return (1-computeOverlap(rtuple2));
     
@@ -579,7 +582,7 @@ public class Evaluator {
         retRcds.fillRelInfo(relRcds);
     }
 
-    public void loadQueryPairs() throws IOException {
+    public void loadQueryPairsTREC() throws IOException {
         FileReader fr = new FileReader(new File(queryPairFile));
         BufferedReader br = new BufferedReader(fr);
 
@@ -620,6 +623,30 @@ public class Evaluator {
         }
     }
 
+ public void loadQueryPairsMSMARCO() throws IOException {
+        FileReader fr = new FileReader(new File(queryPairFile));
+        BufferedReader br = new BufferedReader(fr);
+
+        String line = br.readLine();
+        String prevLine = line;
+        double avgLength = 0;
+        int lineCount = 0;
+
+        ArrayList<QueryPair> querypairs = new ArrayList<>();
+
+        HashMap<String, ArrayList<String>> idMap = new HashMap<>();
+        while (line != null) {
+            String st[] = line.split(",");
+            String pair1 = st[0];
+            String pair2 = st[2];
+            QueryPair qp = new QueryPair(pair1, pair2, st[1]);
+            queryPairs.add(qp);
+            line = br.readLine();
+        }
+    }
+
+    
+    
     public String computeAll() {
         return retRcds.computeAll();
     }
