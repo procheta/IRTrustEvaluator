@@ -90,11 +90,13 @@
     </configuration>
     <executions>
         <execution>
-            <id>make-assembly</id>
-            <phase>package</phase>
-            <goals>                        
-                <goal>single</goal>
+            <id>retrieve</id>
+            <goals>
+                <goal>java</goal>
             </goals>
+             <configuration>
+                <mainClass>org.luc4ir.retriever.TrecDocRetriever</mainClass>
+            </configuration>
          </execution>
      </executions>
     </plugin>
