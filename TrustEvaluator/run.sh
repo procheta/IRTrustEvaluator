@@ -1,4 +1,4 @@
 #!/bin/bash
 #mvn compile
 
-mvn exec:java@retriever -Dexec
+mvn exec:java@retrieve -Dexec
