@@ -200,7 +200,11 @@ class RetrievedResults implements Comparable<RetrievedResults> {
         }
 
         float prec = 0;
-        int numRel = relInfo.numRel;
+
+        int numRel = 0;
+        if (relInfo != null) {
+            numRel = relInfo.numRel;
+        }
         int numRelSeen = 0;
         for (ResultTuple tuple : this.rtuples) {
             if (tuple.rel < Evaluator.threshold) {
@@ -472,7 +476,10 @@ class AllRetrievedResults {
                 String qid_new = String.valueOf(res.qid).split("-")[0];
                 thisRelInfo = relInfo.getRelInfo(qid_new);
             }
-            res.fillRelInfo(thisRelInfo);
+
+            if (thisRelInfo != null) {
+                res.fillRelInfo(thisRelInfo);
+            }
         }
         this.allRelInfo = relInfo;
     }

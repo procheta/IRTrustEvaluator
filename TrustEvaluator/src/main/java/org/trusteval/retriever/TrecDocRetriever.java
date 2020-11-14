@@ -202,7 +202,7 @@ public class TrecDocRetriever {
         if (prop.getProperty("rlm.type").equals("bi")) {
             wvec = new WordVecs(prop);
         }
-                
+        
         for (QueryObject query : queries) {
 
             // Print query
@@ -216,6 +216,7 @@ public class TrecDocRetriever {
                 topDocs = applyFeedback(query, topDocs, wvec);
             }
             // Save results
+            //System.out.println("Num topdocs "+ topDocs.totalHits);
             saveRetrievedTuples(fw, query, topDocs);
         }
 
@@ -286,6 +287,7 @@ public class TrecDocRetriever {
     public void saveRetrievedTuples(FileWriter fw, QueryObject query, TopDocs topDocs) throws Exception {
         StringBuffer buff = new StringBuffer();
         ScoreDoc[] hits = topDocs.scoreDocs;
+        //System.out.println("One query result updated");
         for (int i = 0; i < hits.length; ++i) {
             int docId = hits[i].doc;
             Document d = searcher.doc(docId);
@@ -293,7 +295,7 @@ public class TrecDocRetriever {
                     append(d.get(TrecDocIndexer.FIELD_ID)).append("\t").
                     append((i + 1)).append("\t").
                     append(hits[i].score).append("\t").
-                    append(runName).append("\t").append(reader.document(docId).get("words")).append("\n");
+                    append(runName).append("\t").append(reader.document(docId).get(prop.getProperty("fieldName"))).append("\n");
         }
         fw.write(buff.toString());
     }
