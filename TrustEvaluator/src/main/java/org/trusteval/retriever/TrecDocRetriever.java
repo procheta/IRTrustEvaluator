@@ -90,7 +90,6 @@ public class TrecDocRetriever {
         String queryFile = prop.getProperty("query.file");
         TRECQueryParser parser = new TRECQueryParser(queryFile, indexer.getAnalyzer(), preretievalExpansion, prop.getProperty("fieldName"));
 
-        // parser.parse();
         if (preretievalExpansion) {
             parser.addExpansionTerms();
         }
@@ -101,6 +100,7 @@ public class TrecDocRetriever {
         } else if (collection.equals("MSMARCO")) {
             return parser.loadMSMarcoQueries(queryFile, prop);
         } else {
+            parser.parse();
             return parser.getQueries();
         }
     }
@@ -206,7 +206,7 @@ public class TrecDocRetriever {
         for (QueryObject query : queries) {
 
             // Print query
-            System.out.println("Executing query: " + query.getLuceneQueryObj());
+            //System.out.println("Executing query: " + query.getLuceneQueryObj());
             // Retrieve results
             topDocs = retrieve(query);
 
