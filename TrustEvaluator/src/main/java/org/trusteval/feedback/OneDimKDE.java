@@ -5,11 +5,8 @@
  */
 package org.trusteval.feedback;
 
-import java.util.Arrays;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
-import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.TopDocs;
 import org.trusteval.retriever.NNQueryExpander;
 import org.trusteval.retriever.TrecDocRetriever;
@@ -32,8 +29,8 @@ public class OneDimKDE extends RelevanceModelIId {
     boolean autoParams;
     NNQueryExpander nnQexpander;
     
-    public OneDimKDE(TrecDocRetriever retriever, QueryObject trecQuery, TopDocs topDocs) throws Exception {
-        super(retriever, trecQuery, topDocs);
+    public OneDimKDE(TrecDocRetriever retriever, QueryObject trecQuery, TopDocs topDocs, WordVecs wvec) throws Exception {
+        super(retriever, trecQuery, topDocs, wvec);
         
         toExpand = Boolean.parseBoolean(prop.getProperty("kde.queryexpansion", "false"));        
         if (toExpand)
@@ -103,14 +100,14 @@ public class OneDimKDE extends RelevanceModelIId {
      * set of pseudo-relevant documents as a whole.
      */
     @Override
-    public void computeKDE(String retrieveMode) throws Exception {
+    public void computeKDE(String retrieveMode, HashMap<String, WordVec> wordVecMap) throws Exception {
         
         float f_w; // KDE estimation for term w
         float p_q; // KDE weight, P(q)
         float p_w;
         float this_wt; // phi(q,w)
         
-        buildTermStats(retrieveMode);
+        buildTermStats(retrieveMode, wordVecMap);
         prepareQueryVector();
         
         /* For each w \in V (vocab of top docs),

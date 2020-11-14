@@ -33,7 +33,7 @@ public class WordVecs {
 
     Properties prop;
     int k;
-    HashMap<String, WordVec> wordvecmap;
+    public HashMap<String, WordVec> wordvecmap;
     HashMap<String, List<WordVec>> nearestWordVecsMap; // Store the pre-computed NNs
 
     public WordVecs(String propFile) throws Exception {

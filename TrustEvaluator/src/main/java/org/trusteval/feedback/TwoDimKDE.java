@@ -5,6 +5,7 @@
  */
 package org.trusteval.feedback;
 
+import java.util.HashMap;
 import java.util.Map;
 import org.apache.lucene.search.TopDocs;
 import org.trusteval.retriever.TrecDocRetriever;
@@ -17,18 +18,18 @@ import org.trusteval.wvec.WordVecs;
  */
 public class TwoDimKDE extends OneDimKDE {
 
-    public TwoDimKDE(TrecDocRetriever retriever, QueryObject trecQuery, TopDocs topDocs) throws Exception {
-        super(retriever, trecQuery, topDocs);
+    public TwoDimKDE(TrecDocRetriever retriever, QueryObject trecQuery, TopDocs topDocs, WordVecs wvec) throws Exception {
+        super(retriever, trecQuery, topDocs, wvec);
     }
 
     @Override
-    public void computeKDE(String retrieveMode) throws Exception {
+    public void computeKDE(String rlmMode, HashMap<String, WordVec> wordVecMap) throws Exception {
         float f_w; // KDE estimation for term w
         float p_q; // KDE weight, P(q)
         float p_w;
         float this_wt; // phi(q,w)
         
-        buildTermStats(retrieveMode);
+        buildTermStats(rlmMode, wordVecMap);
         prepareQueryVector();
         
         int docsSeen = 0;
@@ -65,7 +66,8 @@ public class TwoDimKDE extends OneDimKDE {
                 }
                 
                 // Take the average
-                RetrievedDocTermInfo wGlobal = retrievedDocsTermStats.getTermStats(w.wvec);
+                
+                RetrievedDocTermInfo wGlobal = retrievedDocsTermStats.getTermStats(w.term);
                 wGlobal.wt += f_w /(float)qwvecs.getVecs().size();            
             }
             docsSeen++;

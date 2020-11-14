@@ -6,10 +6,7 @@
 package org.trusteval.feedback;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import org.apache.lucene.index.Term;
-import org.apache.lucene.search.Query;
 import org.trusteval.trec.QueryObject;
 import org.trusteval.wvec.WordVec;
 import org.trusteval.wvec.WordVecs;

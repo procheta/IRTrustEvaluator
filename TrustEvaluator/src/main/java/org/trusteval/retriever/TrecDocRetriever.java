@@ -8,7 +8,6 @@ package org.trusteval.retriever;
  *
  * @author Debasis
  */
-import com.github.junrar.unsigned.UnsignedByte;
 import org.trusteval.evaluator.Evaluator;
 import org.trusteval.feedback.RelevanceModelConditional;
 import org.trusteval.feedback.RelevanceModelIId;
@@ -26,6 +25,8 @@ import org.trusteval.feedback.OneDimKDE;
 import org.trusteval.feedback.TwoDimKDE;
 import org.trusteval.trec.QueryObject;
 import org.trusteval.trec.TRECQueryParser;
+import org.trusteval.wvec.WordVec;
+import org.trusteval.wvec.WordVecs;
 
 /**
  *
@@ -97,9 +98,9 @@ public class TrecDocRetriever {
         String collection = prop.getProperty("collection");
         if (collection.equals("Trec")) {
             return parser.findQueries(queryFile, prop);
-        } else  if (collection.equals("MSMARCO")) {
-            return parser.loadMSMarcoQueries(runName, prop);
-        }else{
+        } else if (collection.equals("MSMARCO")) {
+            return parser.loadMSMarcoQueries(queryFile, prop);
+        } else {
             return parser.getQueries();
         }
     }
@@ -108,15 +109,15 @@ public class TrecDocRetriever {
     // of the estimated relevance models. More precisely, if Q1 and Q2
     // are two queries, the function computes pi = P(w|Qi,TOP(Qi)) for i=1,2
     // It then computes KL(p1, p2)
-    public float computeQuerySimilarity(QueryObject q1, QueryObject q2, int ntop) throws Exception {
+    public float computeQuerySimilarity(QueryObject q1, QueryObject q2, int ntop, WordVecs wvec) throws Exception {
 
         // Get the top docs for both q1 and q2
         TopDocs q1_topDocs = searcher.search(q1.getLuceneQueryObj(), ntop);
         TopDocs q2_topDocs = searcher.search(q2.getLuceneQueryObj(), ntop);
 
         // Estimate the relevance models for each query and associated top-docs
-        RelevanceModelIId rm_q1 = new RelevanceModelConditional(this, q1, q1_topDocs);
-        RelevanceModelIId rm_q2 = new RelevanceModelConditional(this, q2, q2_topDocs);
+        RelevanceModelIId rm_q1 = new RelevanceModelConditional(this, q1, q1_topDocs, wvec);
+        RelevanceModelIId rm_q2 = new RelevanceModelConditional(this, q2, q2_topDocs, wvec);
 
         Map<String, RetrievedDocTermInfo> q1_topTermMap = rm_q1.getRetrievedDocsTermStats().getTermStats();
         Map<String, RetrievedDocTermInfo> q2_topTermMap = rm_q2.getRetrievedDocsTermStats().getTermStats();
@@ -198,16 +199,21 @@ public class TrecDocRetriever {
             nnQexpander.expandQueriesWithNN(queries);
         }
         int count = 0;
+        WordVecs wvec = null;
+        if (prop.getProperty("rlm.type").equals("bi")) {
+            wvec = new WordVecs(prop);
+        }
         for (QueryObject query : queries) {
 
             // Print query
-           // System.out.println("Executing query: " + query.getLuceneQueryObj());
+            System.out.println("Executing query: " + query.getLuceneQueryObj());
             // Retrieve results
             topDocs = retrieve(query);
 
             // Apply feedback
             if (Boolean.parseBoolean(prop.getProperty("feedback")) && topDocs.scoreDocs.length > 0) {
-                topDocs = applyFeedback(query, topDocs);
+
+                topDocs = applyFeedback(query, topDocs, wvec);
             }
             // Save results
             saveRetrievedTuples(fw, query, topDocs);
@@ -221,19 +227,19 @@ public class TrecDocRetriever {
         }
     }
 
-    public TopDocs applyFeedback(QueryObject query, TopDocs topDocs) throws Exception {
+    public TopDocs applyFeedback(QueryObject query, TopDocs topDocs, WordVecs wvec) throws Exception {
         RelevanceModelIId fdbkModel;
 
-        fdbkModel = kdeType.equals("uni") ? new OneDimKDE(this, query, topDocs)
-                : kdeType.equals("bi") ? new TwoDimKDE(this, query, topDocs)
-                : kdeType.equals("rlm_iid") ? new RelevanceModelIId(this, query, topDocs)
-                : new RelevanceModelConditional(this, query, topDocs);
+        fdbkModel = kdeType.equals("uni") ? new OneDimKDE(this, query, topDocs, wvec)
+                : kdeType.equals("bi") ? new TwoDimKDE(this, query, topDocs, wvec)
+                : kdeType.equals("rlm_iid") ? new RelevanceModelIId(this, query, topDocs, wvec)
+                : new RelevanceModelConditional(this, query, topDocs, wvec);
 
         try {
             if (kdeType.equals("rlm_conditional") || kdeType.equals("rlm_iid")) {
-                fdbkModel.computeFdbkWeights(prop.getProperty("retrieveMode"));
+                fdbkModel.computeFdbkWeights(prop.getProperty("rlm.type"), null);
             } else {
-                fdbkModel.computeKDE(prop.getProperty("retrieveMode"));
+                fdbkModel.computeKDE(prop.getProperty("rlm.type"), wvec.wordvecmap);
             }
         } catch (Exception ex) {
             ex.printStackTrace();
@@ -248,7 +254,13 @@ public class TrecDocRetriever {
         }
 
         // Post retrieval query expansion
-        QueryObject expandedQuery = fdbkModel.expandQuery(prop.getProperty("retrieveMode"), prop.getProperty("weighted"));
+        String rlmMode = prop.getProperty("rlm.type");
+         QueryObject expandedQuery =null;
+        if (rlmMode.equals("bi")) {
+             expandedQuery = fdbkModel.expandQuery(prop.getProperty("rlm.type"), wvec.wordvecmap);
+        } else {
+            expandedQuery = fdbkModel.expandQuery(prop.getProperty("rlm.type"), null);
+        }
 
         topDocs = searcher.search(expandedQuery.getLuceneQueryObj(), 10);
         return topDocs;
@@ -259,11 +271,11 @@ public class TrecDocRetriever {
         evaluator.load();
         String collection = prop.getProperty("collection");
         if (evalMode.equals("trust")) {
-             if (collection.equals("Trec")) {
-            evaluator.loadQueryPairsTREC();
-             }else{
-               evaluator.loadQueryPairsMSMARCO();
-             }
+            if (collection.equals("Trec")) {
+                evaluator.loadQueryPairsTREC();
+            } else {
+                evaluator.loadQueryPairsMSMARCO();
+            }
             System.out.println(evaluator.computeTrust());
         } else {
             evaluator.fillRelInfo();
@@ -277,7 +289,7 @@ public class TrecDocRetriever {
         for (int i = 0; i < hits.length; ++i) {
             int docId = hits[i].doc;
             Document d = searcher.doc(docId);
-            //System.out.println(d.get("id") + " "+docId);
+            System.out.println(d.get("id") + " " + docId);
             buff.append(query.id.trim()).append("\tQ0\t").
                     append(d.get(TrecDocIndexer.FIELD_ID)).append("\t").
                     append((i + 1)).append("\t").

@@ -5,6 +5,7 @@
  */
 package org.trusteval.feedback;
 
+import java.util.HashMap;
 import org.trusteval.wvec.WordVec;
 
 /**
@@ -20,6 +21,11 @@ public class RetrievedDocTermInfo implements Comparable<RetrievedDocTermInfo> {
 
     public RetrievedDocTermInfo(String term) {
         this.term = term;
+    }
+    
+    public RetrievedDocTermInfo(String term, HashMap<String, WordVec>WordVecMap) {
+        this.term = term;
+        this.wvec = WordVecMap.get(term);
     }
     
      public RetrievedDocTermInfo(WordVec wvec) {

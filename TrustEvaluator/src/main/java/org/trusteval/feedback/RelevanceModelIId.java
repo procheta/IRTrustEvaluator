@@ -57,7 +57,7 @@ public class RelevanceModelIId {
     QueryVecComposer composer;
     static final float TERM_SEL_DF_THRESH = 0.8f;
 
-    public RelevanceModelIId(TrecDocRetriever retriever, QueryObject trecQuery, TopDocs topDocs) throws Exception {
+    public RelevanceModelIId(TrecDocRetriever retriever, QueryObject trecQuery, TopDocs topDocs, WordVecs wvec) throws Exception {
         this.prop = retriever.getProperties();
         this.retriever = retriever;
         this.trecQuery = trecQuery;
@@ -68,21 +68,20 @@ public class RelevanceModelIId {
         nterms = Integer.parseInt(prop.getProperty("rlm.qe.nterms", "10"));
         fbweight = Float.parseFloat(prop.getProperty("rlm.qe.newterms.wt", "0.2"));
 
-        String rlmType= prop.getProperty("rlm.type");
-        if (wvecs == null && (rlmType.equals("bi")|| rlmType.equals("uni"))) {
-             wvecs = new WordVecs(prop);
-             System.out.println("Vector Loaded");
-        }
-        //composer = new QueryVecComposer(trecQuery, wvecs, prop);
+        String rlmType = prop.getProperty("rlm.type");
+        if ((rlmType.equals("bi") || rlmType.equals("uni"))) {
+            wvecs = wvec;
+            composer = new QueryVecComposer(trecQuery, wvecs, prop);
+        } 
     }
 
     public RetrievedDocsTermStats getRetrievedDocsTermStats() {
         return this.retrievedDocsTermStats;
     }
 
-    public void buildTermStats(String retrieveMode) throws Exception {
+    public void buildTermStats(String rlmMode, HashMap<String, WordVec> wordVecMap) throws Exception {
         retrievedDocsTermStats = new RetrievedDocsTermStats(retriever.getReader(), topDocs, numTopDocs);
-        retrievedDocsTermStats.buildAllStats(retrieveMode);
+        retrievedDocsTermStats.buildAllStats(rlmMode, wordVecMap);
         reader = retrievedDocsTermStats.getReader();
     }
 
@@ -97,12 +96,11 @@ public class RelevanceModelIId {
                 + (1 - mixingLambda) * wGlobalInfo.df / retrievedDocsTermStats.sumDf;
     }
 
-    public void computeFdbkWeights(String retrieveMode) throws Exception {
+    public void computeFdbkWeights(String rlmMode, HashMap<String, WordVec> wordVecMap) throws Exception {
         float p_q;
         float p_w;
-
-        buildTermStats(retrieveMode);
-
+       
+        buildTermStats(rlmMode, wordVecMap);
         /* For each w \in V (vocab of top docs),
          * compute f(w) = \sum_{q \in qwvecs} K(w,q) */
         for (Map.Entry<String, RetrievedDocTermInfo> e : retrievedDocsTermStats.termStats.entrySet()) {
@@ -133,11 +131,11 @@ public class RelevanceModelIId {
         }
     }
 
-    public void computeKDE(String retrieveMode) throws Exception {
+    public void computeKDE(String retrieveMode, HashMap<String,WordVec> wordVecMap) throws Exception {
         float p_q;
         float p_w;
 
-        buildTermStats(retrieveMode);
+        buildTermStats(retrieveMode, wordVecMap);
         prepareQueryVector();
 
         /* For each w \in V (vocab of top docs),
@@ -229,17 +227,19 @@ public class RelevanceModelIId {
 
     // Implement post-RLM query expansion. Set the term weights
     // according to the values of f(w).
-    public QueryObject expandQuery(String retrieveMode, String weighted) throws Exception {
+    public QueryObject expandQuery(String rlmMode, HashMap<String, WordVec> wordVecMap) throws Exception {
 
         // The calling sequence has to make sure that the top docs are already
         // reranked by KL-div
         // Now reestimate relevance model on the reranked docs this time
         // for QE.
-        computeFdbkWeights(retrieveMode);
+        computeFdbkWeights(rlmMode, wordVecMap);
 
-        QueryObject expandedQuery = new QueryObject(this.trecQuery);
+        QueryObject expandedQuery = this.trecQuery;
         Set<Term> origTerms = new HashSet<Term>();
         //this.trecQuery.luceneQuery.extractTerms(origTerms);
+        
+        
         expandedQuery.luceneQuery = new BooleanQuery();
         HashMap<String, String> origQueryWordStrings = new HashMap<>();
 
@@ -274,7 +274,7 @@ public class RelevanceModelIId {
             //---POST_SIGIR review
             ((BooleanQuery) expandedQuery.luceneQuery).add(tq, BooleanClause.Occur.SHOULD);
         }
-
+           
         //expandedQuery.luceneQuery = this.trecQuery.luceneQuery;
         int nTermsAdded = 0;
         for (RetrievedDocTermInfo selTerm : termStats) {

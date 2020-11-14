@@ -5,6 +5,7 @@
 package org.trusteval.evaluator;
 
 import java.io.BufferedReader;
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
@@ -493,9 +494,10 @@ class AllRetrievedResults {
                 }
                 
             } catch (Exception e) {
+                System.out.println("Exception..");
             }
         }
-
+        
         buff.append("Avg Jaccard:\t").append(avgJaccard / (double) queryPairs.size()).append("\n");
         buff.append("Avg Weighted Jaccard:\t").append(avgWeightedJaccard / (double) queryPairs.size()).append("\n");
         buff.append("Avg Content Sim:\t").append(contentMetric / (double) queryPairs.size()).append("\n");
@@ -591,7 +593,7 @@ public class Evaluator {
         double avgLength = 0;
         int lineCount = 0;
 
-        ArrayList<QueryPair> querypairs = new ArrayList<>();
+        this.queryPairs = new ArrayList<>();
 
         HashMap<String, ArrayList<String>> idMap = new HashMap<>();
         while (line != null) {
@@ -632,14 +634,14 @@ public class Evaluator {
         double avgLength = 0;
         int lineCount = 0;
 
-        ArrayList<QueryPair> querypairs = new ArrayList<>();
-
+        this.queryPairs = new ArrayList<>();
+        int count = 0;
         HashMap<String, ArrayList<String>> idMap = new HashMap<>();
         while (line != null) {
             String st[] = line.split(",");
-            String pair1 = st[0];
-            String pair2 = st[2];
-            QueryPair qp = new QueryPair(pair1, pair2, st[1]);
+            String pair1 = String.valueOf(count++);
+            String pair2 = String.valueOf(count++);
+            QueryPair qp = new QueryPair(pair1, pair2, st[3]);
             queryPairs.add(qp);
             line = br.readLine();
         }
