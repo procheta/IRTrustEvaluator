@@ -296,10 +296,10 @@ class RetrievedResults implements Comparable<RetrievedResults> {
         double jacc = (double) numOverLap / (docIds.size() + docIds2.size() - numOverLap);
         return jacc;
     }
-    
-    double computeInverseJaccard(RetrievedResults rtuple2){
-    
-     return (1- computeJaccard(rtuple2));
+
+    double computeInverseJaccard(RetrievedResults rtuple2) {
+
+        return (1 - computeJaccard(rtuple2));
     }
 
     public HashMap<String, Double> computeWordDistribution(ArrayList<String> contentArray) {
@@ -352,7 +352,7 @@ class RetrievedResults implements Comparable<RetrievedResults> {
         for (int i = 0; i < rtuples.size(); i++) {
             String docid = rtuples.get(i).docName;
             String content = rtuples.get(i).content;
-            content = tqp.analyze(content,"stop.txt");
+            content = tqp.analyze(content, "stop.txt");
             contentArray.add(content);
         }
         HashMap<String, Double> wordCountMap1 = computeWordDistribution(contentArray);
@@ -367,11 +367,11 @@ class RetrievedResults implements Comparable<RetrievedResults> {
         double kldiv = computeKLDivergence(wordCountMap1, wordCountMap2);
         return kldiv;
     }
-    
-    public double computeInverseOverlap(RetrievedResults rtuple2) throws Exception{
-    
-        return (1-computeOverlap(rtuple2));
-    
+
+    public double computeInverseOverlap(RetrievedResults rtuple2) throws Exception {
+
+        return (1 - computeOverlap(rtuple2));
+
     }
 
     double computeWeightedJaccard(RetrievedResults rtuple2) {
@@ -409,7 +409,7 @@ class RetrievedResults implements Comparable<RetrievedResults> {
 
     public double computeInverseWeightedJaccard(RetrievedResults rtuple2) {
 
-        return (1-computeWeightedJaccard(rtuple2));
+        return (1 - computeWeightedJaccard(rtuple2));
     }
 
     @Override
@@ -462,10 +462,16 @@ class AllRetrievedResults {
         return buff.toString();
     }
 
-    public void fillRelInfo(AllRelRcds relInfo) {
+    public void fillRelInfo(AllRelRcds relInfo, String evalMode) {
         for (Map.Entry<String, RetrievedResults> e : allRetMap.entrySet()) {
             RetrievedResults res = e.getValue();
-            PerQueryRelDocs thisRelInfo = relInfo.getRelInfo(String.valueOf(res.qid));
+            PerQueryRelDocs thisRelInfo = null;
+            if (evalMode.equals("trust")) {
+                thisRelInfo = relInfo.getRelInfo(String.valueOf(res.qid));
+            } else {
+                String qid_new = String.valueOf(res.qid).split("-")[0];
+                thisRelInfo = relInfo.getRelInfo(qid_new);
+            }
             res.fillRelInfo(thisRelInfo);
         }
         this.allRelInfo = relInfo;
@@ -487,17 +493,17 @@ class AllRetrievedResults {
                     avgJaccard += r1.computeJaccard(r2);
                     avgWeightedJaccard += r1.computeWeightedJaccard(r2);
                     contentMetric += r1.computeOverlap(r2);
-                }else{
-                     avgJaccard += r1.computeInverseJaccard(r2);
+                } else {
+                    avgJaccard += r1.computeInverseJaccard(r2);
                     avgWeightedJaccard += r1.computeInverseWeightedJaccard(r2);
                     contentMetric += r1.computeInverseOverlap(r2);
                 }
-                
+
             } catch (Exception e) {
                 System.out.println("Exception..");
             }
         }
-        
+
         buff.append("Avg Jaccard:\t").append(avgJaccard / (double) queryPairs.size()).append("\n");
         buff.append("Avg Weighted Jaccard:\t").append(avgWeightedJaccard / (double) queryPairs.size()).append("\n");
         buff.append("Avg Content Sim:\t").append(contentMetric / (double) queryPairs.size()).append("\n");
@@ -529,7 +535,6 @@ class AllRetrievedResults {
                 ndcg_5 = thisNDCG_5;
             }
         }
-        System.out.println(allRelInfo.getTotalNumRel());
         float f = avgRecall / (float) allRelInfo.getTotalNumRel();
         System.out.println("recall values " + avgRecall + " " + f);
         buff.append("recall:\t").append(avgRecall / 5588).append("\n");
@@ -580,8 +585,8 @@ public class Evaluator {
         retRcds.load();
     }
 
-    public void fillRelInfo() {
-        retRcds.fillRelInfo(relRcds);
+    public void fillRelInfo(String evalMode) {
+        retRcds.fillRelInfo(relRcds, evalMode);
     }
 
     public void loadQueryPairsTREC() throws IOException {
@@ -625,7 +630,7 @@ public class Evaluator {
         }
     }
 
- public void loadQueryPairsMSMARCO() throws IOException {
+    public void loadQueryPairsMSMARCO() throws IOException {
         FileReader fr = new FileReader(new File(queryPairFile));
         BufferedReader br = new BufferedReader(fr);
 
@@ -647,8 +652,6 @@ public class Evaluator {
         }
     }
 
-    
-    
     public String computeAll() {
         return retRcds.computeAll();
     }
@@ -679,7 +682,7 @@ public class Evaluator {
 
             Evaluator evaluator = new Evaluator(qrelsFile, resFile);
             evaluator.load();
-            evaluator.fillRelInfo();
+            evaluator.fillRelInfo("");
             System.out.println(evaluator.computeAll());
         } catch (Exception ex) {
             ex.printStackTrace();

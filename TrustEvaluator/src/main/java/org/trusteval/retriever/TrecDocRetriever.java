@@ -198,11 +198,11 @@ public class TrecDocRetriever {
             NNQueryExpander nnQexpander = new NNQueryExpander(prop);
             nnQexpander.expandQueriesWithNN(queries);
         }
-        int count = 0;
         WordVecs wvec = null;
         if (prop.getProperty("rlm.type").equals("bi")) {
             wvec = new WordVecs(prop);
         }
+                
         for (QueryObject query : queries) {
 
             // Print query
@@ -278,7 +278,7 @@ public class TrecDocRetriever {
             }
             System.out.println(evaluator.computeTrust());
         } else {
-            evaluator.fillRelInfo();
+            evaluator.fillRelInfo(evalMode);
             System.out.println(evaluator.computeAll());
         }
     }
@@ -289,7 +289,6 @@ public class TrecDocRetriever {
         for (int i = 0; i < hits.length; ++i) {
             int docId = hits[i].doc;
             Document d = searcher.doc(docId);
-            System.out.println(d.get("id") + " " + docId);
             buff.append(query.id.trim()).append("\tQ0\t").
                     append(d.get(TrecDocIndexer.FIELD_ID)).append("\t").
                     append((i + 1)).append("\t").
