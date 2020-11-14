@@ -60,7 +60,7 @@ public class TrecDocRetriever {
             String retrieverModel = prop.getProperty("retrieveModel");
             if (retrieverModel.equals("BM25")) {
                 float k = Float.parseFloat(prop.getProperty("k", "1"));
-                float b = Float.parseFloat(prop.getProperty("b", "0.5f"));
+                float b = Float.parseFloat(prop.getProperty("b", "0.7f"));
                 this.model = new BM25Similarity(k, b);
             } else {
                 float lambda = Float.parseFloat(prop.getProperty("lambda", "0.5f"));
@@ -269,7 +269,7 @@ public class TrecDocRetriever {
 
     public void evaluate(String evalMode) throws Exception {
         Evaluator evaluator = new Evaluator(this.getProperties());
-        evaluator.load();
+        evaluator.load(evalMode);
         String collection = prop.getProperty("collection");
         if (evalMode.equals("trust")) {
             if (collection.equals("Trec")) {

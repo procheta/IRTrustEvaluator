@@ -169,8 +169,12 @@ class RetrievedResults implements Comparable<RetrievedResults> {
         numRelRet = -1;
     }
 
-    void addTuple(String docName, int rank, String content) {
-        rtuples.add(new ResultTuple(docName, rank, content));
+    void addTuple(String docName, int rank, String content, String evalMode) {
+        if (evalMode.equals("trust")) {
+            rtuples.add(new ResultTuple(docName, rank, content));
+        } else {
+            rtuples.add(new ResultTuple(docName, rank));
+        }
     }
 
     public String toString() {
@@ -434,19 +438,19 @@ class AllRetrievedResults {
         allRetMap = new TreeMap<>();
     }
 
-    public void load() {
+    public void load(String evalMode) {
         String line;
         try (FileReader fr = new FileReader(resFile);
                 BufferedReader br = new BufferedReader(fr);) {
             while ((line = br.readLine()) != null) {
-                storeRetRcd(line);
+                storeRetRcd(line, evalMode);
             }
         } catch (Exception ex) {
             ex.printStackTrace();
         }
     }
 
-    void storeRetRcd(String line) {
+    void storeRetRcd(String line, String evalMode) {
         String[] tokens = line.split("\t");
         String qid = tokens[0];
         RetrievedResults res = allRetMap.get(qid);
@@ -454,7 +458,7 @@ class AllRetrievedResults {
             res = new RetrievedResults(qid, "");
             allRetMap.put(qid, res);
         }
-        res.addTuple(tokens[2], Integer.parseInt(tokens[3]), tokens[6]);
+        res.addTuple(tokens[2], Integer.parseInt(tokens[3]), tokens[6], evalMode);
     }
 
     public String toString() {
@@ -587,9 +591,9 @@ public class Evaluator {
         queryPairFile = prop.getProperty("querypairs.file");
     }
 
-    public void load() throws Exception {
+    public void load(String evalMode) throws Exception {
         relRcds.load();
-        retRcds.load();
+        retRcds.load(evalMode);
     }
 
     public void fillRelInfo(String evalMode) {
@@ -688,7 +692,7 @@ public class Evaluator {
             String resFile = prop.getProperty("res.file");
 
             Evaluator evaluator = new Evaluator(qrelsFile, resFile);
-            evaluator.load();
+            evaluator.load("");
             evaluator.fillRelInfo("");
             System.out.println(evaluator.computeAll());
         } catch (Exception ex) {
