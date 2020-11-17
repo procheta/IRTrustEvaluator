@@ -284,10 +284,15 @@ public class RelevanceModelIId {
         int nTermsAdded = 0;
         for (RetrievedDocTermInfo selTerm : termStats) {
 
+            if (nTermsAdded >= nterms) {
+                break;
+            }
+            
             String thisTerm = selTerm.getTerm();
             if (origQueryWordStrings.get(thisTerm) != null) {
                 continue;
             }
+            
 
             TermQuery tq = new TermQuery(new Term(TrecDocIndexer.ALL_STR, thisTerm));
             ((BooleanQuery) expandedQuery.luceneQuery).add(tq, BooleanClause.Occur.SHOULD);
@@ -299,9 +304,7 @@ public class RelevanceModelIId {
             //tq.setBoost(selTerm.wt);
             //---POST_SIGIR review
             nTermsAdded++;
-            if (nTermsAdded >= nterms) {
-                break;
-            }
+            
         }
 
         return expandedQuery;
