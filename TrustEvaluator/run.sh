@@ -4,13 +4,13 @@ mvn compile
 
 INDEX=C:/Users/Procheta/Downloads/index_lucene_5.3/
 QUERY=C:/Users/Procheta/Downloads/robust-uqv.txt
-FEEDBACK=false
+FEEDBACK=true
 QRELS=C:/Users/Procheta/Downloads/TrustEvaluator/data/qrels/qrels.trec6.adhoc
 RESFILE=C:/Users/Procheta/Desktop/result.txt
 
-for k in 1 1.5 
+for k in 2 5 8 10 
 do
-for b in 0.5 0.6 
+for b in 0.1 0.2 0.3 0.4 0.5 0.6 0.7 
 
 do
 cat > retrieve.properties << EOF1
@@ -30,7 +30,7 @@ feedback=$FEEDBACK
 eval=true
 
 #number of topdocs used for feedback
-fdbk.numtopdocs=5
+fdbk.numtopdocs=$k
 
 #stopwordFile
 stopfile=stop.txt
@@ -45,7 +45,7 @@ retrieve.num_wanted=10
 rlm.qe=true
 
 #query expansion term weight using rlm
-rlm.qe.newterms.wt=0.7
+rlm.qe.newterms.wt=$b
 
 #number of expansion terms
 rlm.qe.nterms=10
@@ -81,8 +81,8 @@ retrieveModel=BM25
 querypairs.file=C:/Users/Procheta/Downloads/robust-uqv.txt
 
 fieldName=words
-k=$k
-b=$b
+k=0.8
+b=0.7
 
 
 EOF1
