@@ -45,37 +45,35 @@ public class TrecDocRetriever {
     boolean postQERerank;
     Similarity model;
     boolean preretievalExpansion;
+    boolean debugMode;
 
     public TrecDocRetriever(String propFile) throws Exception {
         indexer = new TrecDocIndexer(propFile);
         prop = indexer.getProperties();
+        File indexDir = indexer.getIndexDir();
+        System.out.println("Running queries against index: " + indexDir.getPath());
 
-        try {
-            File indexDir = indexer.getIndexDir();
-            System.out.println("Running queries against index: " + indexDir.getPath());
+        reader = DirectoryReader.open(FSDirectory.open(indexDir.toPath()));
+        searcher = new IndexSearcher(reader);
 
-            reader = DirectoryReader.open(FSDirectory.open(indexDir.toPath()));
-            searcher = new IndexSearcher(reader);
-
-            String retrieverModel = prop.getProperty("retrieveModel");
-            if (retrieverModel.equals("BM25")) {
-                float k = Float.parseFloat(prop.getProperty("k", "1"));
-                float b = Float.parseFloat(prop.getProperty("b", "0.7f"));
-                this.model = new BM25Similarity(k, b);
-            } else {
-                float lambda = Float.parseFloat(prop.getProperty("lambda", "0.5f"));
-                this.model = new LMJelinekMercerSimilarity(lambda);
-            }
-            searcher.setSimilarity(model);
-
-            numWanted = Integer.parseInt(prop.getProperty("retrieve.num_wanted", "1000"));
-            runName = prop.getProperty("retrieve.runname", "bm");
-
-            kdeType = prop.getProperty("rlm.type", "uni");
-            preretievalExpansion = Boolean.parseBoolean(prop.getProperty("preretievalExpansion", "false"));
-        } catch (Exception ex) {
-            ex.printStackTrace();
+        String retrieverModel = prop.getProperty("retrieveModel");
+        if (retrieverModel.equals("BM25")) {
+            float k = Float.parseFloat(prop.getProperty("k", "1"));
+            float b = Float.parseFloat(prop.getProperty("b", "0.7f"));
+            this.model = new BM25Similarity(k, b);
+        } else {
+            float lambda = Float.parseFloat(prop.getProperty("lambda", "0.5f"));
+            this.model = new LMJelinekMercerSimilarity(lambda);
         }
+        searcher.setSimilarity(model);
+
+        numWanted = Integer.parseInt(prop.getProperty("retrieve.num_wanted", "1000"));
+        runName = prop.getProperty("retrieve.runname", "bm");
+
+        kdeType = prop.getProperty("rlm.type", "uni");
+        preretievalExpansion = Boolean.parseBoolean(prop.getProperty("preretievalExpansion", "false"));
+        debugMode = Boolean.parseBoolean(prop.getProperty("debugMode"));
+
     }
 
     public Properties getProperties() {
@@ -202,11 +200,18 @@ public class TrecDocRetriever {
         if (prop.getProperty("rlm.type").equals("bi")) {
             wvec = new WordVecs(prop);
         }
-        
+        int count = 0;
+
         for (QueryObject query : queries) {
 
             // Print query
-            //System.out.println("Executing query: " + query.getLuceneQueryObj());
+            if (debugMode) {
+                if (count == 6) {
+                    continue;
+                }
+                System.out.println("Executing query: " + query.id + " " + query);
+
+            }
             // Retrieve results
             topDocs = retrieve(query);
 
@@ -218,6 +223,10 @@ public class TrecDocRetriever {
             // Save results
             //System.out.println("Num topdocs "+ topDocs.totalHits);
             saveRetrievedTuples(fw, query, topDocs);
+
+            if (debugMode) {
+                count++;
+            }
         }
 
         fw.close();
@@ -256,20 +265,23 @@ public class TrecDocRetriever {
 
         // Post retrieval query expansion
         String rlmMode = prop.getProperty("rlm.type");
-         QueryObject expandedQuery =null;
+        QueryObject expandedQuery = null;
         if (rlmMode.equals("bi")) {
-             expandedQuery = fdbkModel.expandQuery(prop.getProperty("rlm.type"), wvec.wordvecmap);
+            expandedQuery = fdbkModel.expandQuery(prop.getProperty("rlm.type"), wvec.wordvecmap);
         } else {
             expandedQuery = fdbkModel.expandQuery(prop.getProperty("rlm.type"), null);
         }
 
+        if(debugMode){
+            System.out.println("Expanded Query "+ expandedQuery);
+        }
         topDocs = searcher.search(expandedQuery.getLuceneQueryObj(), 10);
         return topDocs;
     }
 
     public void evaluate(String evalMode) throws Exception {
         Evaluator evaluator = new Evaluator(this.getProperties());
-        evaluator.load(evalMode);
+        evaluator.load(evalMode, debugMode);
         String collection = prop.getProperty("collection");
         if (evalMode.equals("trust")) {
             if (collection.equals("Trec")) {

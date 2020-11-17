@@ -19,6 +19,7 @@ import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.BooleanClause;
 import org.apache.lucene.search.BooleanQuery;
+import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.search.TopDocs;
@@ -236,9 +237,13 @@ public class RelevanceModelIId {
         computeFdbkWeights(rlmMode, wordVecMap);
 
         QueryObject expandedQuery = this.trecQuery;
-        Set<Term> origTerms = new HashSet<Term>();
+        HashSet<Term> origTerms = new HashSet<>();
         //this.trecQuery.luceneQuery.extractTerms(origTerms);
-        
+        Query tempQ= expandedQuery.luceneQuery;
+        String st[] =tempQ.toString().split("\\s+");
+        for(String word: st){
+            origTerms.add(new Term(TrecDocIndexer.ALL_STR,word.split(":")[1]));
+        }
         
         expandedQuery.luceneQuery = new BooleanQuery();
         HashMap<String, String> origQueryWordStrings = new HashMap<>();

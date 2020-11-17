@@ -161,12 +161,14 @@ class RetrievedResults implements Comparable<RetrievedResults> {
     float avgP;
     PerQueryRelDocs relInfo;
     IndexReader reader;
+    Boolean debugMode;
 
-    public RetrievedResults(String qid, String indexPath) {
+    public RetrievedResults(String qid, String indexPath, Boolean debugMode) {
         this.qid = qid;
         this.rtuples = new ArrayList<>(1000);
         avgP = -1;
         numRelRet = -1;
+        this.debugMode = debugMode;
     }
 
     void addTuple(String docName, int rank, String content, String evalMode) {
@@ -291,7 +293,9 @@ class RetrievedResults implements Comparable<RetrievedResults> {
         for (int i = 0; i < rtuples.size(); i++) {
             String docid = rtuples.get(i).docName;
             docIds.add(docid);
-            docid = rtuple2.rtuples.get(i).docName;
+        }
+        for (int i = 0; i < rtuple2.rtuples.size(); i++) {
+            String docid = rtuple2.rtuples.get(i).docName;
             docIds2.add(docid);
         }
 
@@ -301,6 +305,13 @@ class RetrievedResults implements Comparable<RetrievedResults> {
                 numOverLap++;
             }
         }
+
+        if (debugMode) {
+            System.out.println(docIds);
+            System.out.println(docIds2);
+            System.out.println(numOverLap);
+        }
+
         double jacc = (double) numOverLap / (docIds.size() + docIds2.size() - numOverLap);
         return jacc;
     }
@@ -364,6 +375,7 @@ class RetrievedResults implements Comparable<RetrievedResults> {
             contentArray.add(content);
         }
         HashMap<String, Double> wordCountMap1 = computeWordDistribution(contentArray);
+        //System.out.println(wordCountMap1);
 
         contentArray = new ArrayList<>();
         for (int i = 0; i < rtuple2.rtuples.size(); i++) {
@@ -372,6 +384,7 @@ class RetrievedResults implements Comparable<RetrievedResults> {
             contentArray.add(content);
         }
         HashMap<String, Double> wordCountMap2 = computeWordDistribution(contentArray);
+        //System.out.println(wordCountMap1);
         double kldiv = computeKLDivergence(wordCountMap1, wordCountMap2);
         return kldiv;
     }
@@ -395,9 +408,16 @@ class RetrievedResults implements Comparable<RetrievedResults> {
                 docIdUnion.add(docid);
                 docNames.add(docid);
             }
-            docid = rtuple2.rtuples.get(i).docName;
-            docIds2.add(docid);
         }
+        for (int i = 0; i < rtuple2.rtuples.size(); i++) {
+            String docid = rtuple2.rtuples.get(i).docName;
+            docIds2.add(docid);
+            if (!docNames.contains(docid)) {
+                docIdUnion.add(docid);
+                docNames.add(docid);
+            }
+        }
+
         double wJacc = 0;
         for (int i = 0; i < docIdUnion.size(); i++) {
             String docId = docIdUnion.get(i);
@@ -438,24 +458,24 @@ class AllRetrievedResults {
         allRetMap = new TreeMap<>();
     }
 
-    public void load(String evalMode) {
+    public void load(String evalMode, Boolean debugMode) {
         String line;
         try (FileReader fr = new FileReader(resFile);
                 BufferedReader br = new BufferedReader(fr);) {
             while ((line = br.readLine()) != null) {
-                storeRetRcd(line, evalMode);
+                storeRetRcd(line, evalMode, debugMode);
             }
         } catch (Exception ex) {
             ex.printStackTrace();
         }
     }
 
-    void storeRetRcd(String line, String evalMode) {
+    void storeRetRcd(String line, String evalMode, Boolean debugMode) {
         String[] tokens = line.split("\t");
         String qid = tokens[0];
         RetrievedResults res = allRetMap.get(qid);
         if (res == null) {
-            res = new RetrievedResults(qid, "");
+            res = new RetrievedResults(qid, "", debugMode);
             allRetMap.put(qid, res);
         }
         res.addTuple(tokens[2], Integer.parseInt(tokens[3]), tokens[6], evalMode);
@@ -512,6 +532,8 @@ class AllRetrievedResults {
 
             } catch (Exception e) {
                 System.out.println("Exception..");
+                e.printStackTrace();
+                System.out.println(allRetMap.containsKey(q1) + " " + allRetMap.containsKey(q2) + q1 + " " + q2);
             }
         }
 
@@ -591,9 +613,9 @@ public class Evaluator {
         queryPairFile = prop.getProperty("querypairs.file");
     }
 
-    public void load(String evalMode) throws Exception {
+    public void load(String evalMode, Boolean debugMode) throws Exception {
         relRcds.load();
-        retRcds.load(evalMode);
+        retRcds.load(evalMode, debugMode);
     }
 
     public void fillRelInfo(String evalMode) {
@@ -692,7 +714,7 @@ public class Evaluator {
             String resFile = prop.getProperty("res.file");
 
             Evaluator evaluator = new Evaluator(qrelsFile, resFile);
-            evaluator.load("");
+            evaluator.load("", null);
             evaluator.fillRelInfo("");
             System.out.println(evaluator.computeAll());
         } catch (Exception ex) {
