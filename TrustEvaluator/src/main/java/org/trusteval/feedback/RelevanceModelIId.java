@@ -275,7 +275,7 @@ public class RelevanceModelIId {
             TermQuery tq = new TermQuery(t);
             //+++POST_SIGIR review: Assigned weights according to RLM post QE
             //tq.setBoost((1 - fbweight) / (float) origTerms.size());
-            tq.setBoost((1-fbweight));
+            //tq.setBoost((1-fbweight));
             //---POST_SIGIR review
             ((BooleanQuery) expandedQuery.luceneQuery).add(tq, BooleanClause.Occur.SHOULD);
         }

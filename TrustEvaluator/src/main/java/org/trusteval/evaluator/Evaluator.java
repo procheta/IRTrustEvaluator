@@ -308,11 +308,16 @@ class RetrievedResults implements Comparable<RetrievedResults> {
 
         if (debugMode) {
             System.out.println(docIds);
-            System.out.println(docIds2);
-            System.out.println(numOverLap);
+           System.out.println(docIds2);
+           System.out.println("number of overlap " +numOverLap);
         }
 
         double jacc = (double) numOverLap / (docIds.size() + docIds2.size() - numOverLap);
+        
+         if (debugMode) {
+         //System.out.println("Jaccard "+ jacc);
+         
+         }
         return jacc;
     }
 
@@ -346,6 +351,9 @@ class RetrievedResults implements Comparable<RetrievedResults> {
             wordCountMap.put(st, wordCountMap.get(st) / totalSumFreq);
         }
 
+        if(debugMode){
+            System.out.println(wordCountMap.size());
+        }
         return wordCountMap;
     }
 
