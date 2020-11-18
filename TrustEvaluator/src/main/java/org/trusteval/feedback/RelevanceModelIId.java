@@ -245,7 +245,7 @@ public class RelevanceModelIId {
             origTerms.add(new Term(TrecDocIndexer.ALL_STR,word.split(":")[1]));
         }
         
-        expandedQuery.luceneQuery = new BooleanQuery();
+        //expandedQuery.luceneQuery = new BooleanQuery();
         HashMap<String, String> origQueryWordStrings = new HashMap<>();
 
         float normalizationFactor = 0;
@@ -270,7 +270,7 @@ public class RelevanceModelIId {
         }
 
         Collections.sort(termStats);
-        for (Term t : origTerms) {
+        /*r (Term t : origTerms) {
             origQueryWordStrings.put(t.text(), t.text());
             TermQuery tq = new TermQuery(t);
             //+++POST_SIGIR review: Assigned weights according to RLM post QE
@@ -278,7 +278,7 @@ public class RelevanceModelIId {
             //tq.setBoost((1-fbweight));
             //---POST_SIGIR review
             ((BooleanQuery) expandedQuery.luceneQuery).add(tq, BooleanClause.Occur.SHOULD);
-        }
+        }*/
            
         //expandedQuery.luceneQuery = this.trecQuery.luceneQuery;
         int nTermsAdded = 0;
