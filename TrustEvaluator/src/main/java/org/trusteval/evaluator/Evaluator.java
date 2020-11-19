@@ -308,16 +308,16 @@ class RetrievedResults implements Comparable<RetrievedResults> {
 
         if (debugMode) {
             System.out.println(docIds);
-           System.out.println(docIds2);
-           System.out.println("number of overlap " +numOverLap);
+            System.out.println(docIds2);
+            System.out.println("number of overlap " + numOverLap);
         }
 
         double jacc = (double) numOverLap / (docIds.size() + docIds2.size() - numOverLap);
-        
-         if (debugMode) {
-         //System.out.println("Jaccard "+ jacc);
-         
-         }
+
+        if (debugMode) {
+            System.out.println("Jaccard " + jacc);
+
+        }
         return jacc;
     }
 
@@ -351,7 +351,7 @@ class RetrievedResults implements Comparable<RetrievedResults> {
             wordCountMap.put(st, wordCountMap.get(st) / totalSumFreq);
         }
 
-        if(debugMode){
+        if (debugMode) {
             System.out.println(wordCountMap.size());
         }
         return wordCountMap;
@@ -425,21 +425,21 @@ class RetrievedResults implements Comparable<RetrievedResults> {
                 docNames.add(docid);
             }
         }
-
         double wJacc = 0;
         for (int i = 0; i < docIdUnion.size(); i++) {
             String docId = docIdUnion.get(i);
             int rank1 = docIds.indexOf(docId) + 1;
             int rank2 = docIds2.indexOf(docId) + 1;
-            if (rank1 == -1) {
-                rank1 = 11;
+            if (rank1 == 0) {
+                rank1 = 50;
             }
-            if (rank2 == -1) {
-                rank1 = 11;
+            if (rank2 == 0) {
+                rank1 = 50;
             }
             wJacc += Math.exp(-((rank1 - rank2) * (rank1 - rank2)));
         }
         wJacc /= docIdUnion.size();
+        System.out.println(wJacc);
         return wJacc;
     }
 
