@@ -540,7 +540,7 @@ class AllRetrievedResults {
 
             } catch (Exception e) {
                 System.out.println("Exception..");
-                e.printStackTrace();
+                //e.printStackTrace();
                 System.out.println(allRetMap.containsKey(q1) + " " + allRetMap.containsKey(q2) + q1 + " " + q2);
             }
         }
