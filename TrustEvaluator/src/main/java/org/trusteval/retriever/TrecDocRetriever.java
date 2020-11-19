@@ -207,7 +207,7 @@ public class TrecDocRetriever {
             // Print query
             if (debugMode) {
                 if (count == 6) {
-                    continue;
+                    //continue;
                 }
                 System.out.println("Executing query: " + query.id + " " + query);
 
@@ -275,7 +275,7 @@ public class TrecDocRetriever {
         if(debugMode){
             System.out.println("Expanded Query "+ expandedQuery);
         }
-        topDocs = searcher.search(expandedQuery.getLuceneQueryObj(), 10);
+        topDocs = searcher.search(expandedQuery.getLuceneQueryObj(), numWanted);
         return topDocs;
     }
 

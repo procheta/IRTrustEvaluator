@@ -242,10 +242,13 @@ public class RelevanceModelIId {
         Query tempQ= expandedQuery.luceneQuery;
         String st[] =tempQ.toString().split("\\s+");
         for(String word: st){
-            origTerms.add(new Term(TrecDocIndexer.ALL_STR,word.split(":")[1]));
+		try{
+			origTerms.add(new Term(TrecDocIndexer.ALL_STR,word.split(":")[1]));
+		}catch(Exception e){
+			System.out.println(word);
+		}
         }
         
-        //expandedQuery.luceneQuery = new BooleanQuery();
         HashMap<String, String> origQueryWordStrings = new HashMap<>();
 
         float normalizationFactor = 0;
@@ -270,7 +273,7 @@ public class RelevanceModelIId {
         }
 
         Collections.sort(termStats);
-        /*r (Term t : origTerms) {
+        /*for (Term t : origTerms) {
             origQueryWordStrings.put(t.text(), t.text());
             TermQuery tq = new TermQuery(t);
             //+++POST_SIGIR review: Assigned weights according to RLM post QE
