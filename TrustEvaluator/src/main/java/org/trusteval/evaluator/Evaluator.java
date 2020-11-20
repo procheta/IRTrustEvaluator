@@ -540,7 +540,7 @@ class AllRetrievedResults {
 
             } catch (Exception e) {
                 System.out.println("Exception..");
-                //e.printStackTrace();
+                e.printStackTrace();
                 System.out.println(allRetMap.containsKey(q1) + " " + allRetMap.containsKey(q2) + q1 + " " + q2);
             }
         }
@@ -684,10 +684,10 @@ public class Evaluator {
         int count = 0;
         HashMap<String, ArrayList<String>> idMap = new HashMap<>();
         while (line != null) {
-            String st[] = line.split(",");
+            String st[] = line.split("\t");
             String pair1 = String.valueOf(count++);
             String pair2 = String.valueOf(count++);
-            QueryPair qp = new QueryPair(pair1, pair2, st[3]);
+            QueryPair qp = new QueryPair(pair1, pair2, st[2]);
             queryPairs.add(qp);
             line = br.readLine();
         }
