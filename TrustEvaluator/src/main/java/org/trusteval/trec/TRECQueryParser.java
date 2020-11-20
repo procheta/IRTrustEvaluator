@@ -270,7 +270,7 @@ public class TRECQueryParser extends DefaultHandler {
         ArrayList<QueryObject> tqs = new ArrayList<>();
         int count = 0;
         while (line != null) {
-            String st[] = line.split(",");
+            String st[] = line.split("\t");
             String query = analyze(st[0], "stop.txt");
             QueryObject  tq = new QueryObject ();
             tq.id = String.valueOf(count++);
@@ -287,7 +287,7 @@ public class TRECQueryParser extends DefaultHandler {
             tq.luceneQuery = bq;
             
             tqs.add(tq);
-            query = analyze(st[2], "stop.txt");
+            query = analyze(st[1], "stop.txt");
             
             tq = new QueryObject ();
             tq.id = String.valueOf(count++);
