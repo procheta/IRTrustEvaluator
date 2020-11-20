@@ -101,7 +101,7 @@ public class TRECQueryParser extends DefaultHandler {
             queryText = queryText + " " + s;
         }
 
-        st = trecQuery.desc.split("\\s+");
+      /*  st = trecQuery.desc.split("\\s+");
         for (String s : st) {
             queryText = queryText + " " + s;
         }
@@ -110,7 +110,7 @@ public class TRECQueryParser extends DefaultHandler {
         for (String s : st) {
             queryText = queryText + " " + s;
         }
-
+*/
         st = queryText.split("\\s+");
         BooleanQuery query = new BooleanQuery();
         for (String s : st) {
