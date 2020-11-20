@@ -57,6 +57,7 @@ public class RelevanceModelIId {
     QueryWordVecs qwvecs;
     QueryVecComposer composer;
     static final float TERM_SEL_DF_THRESH = 0.8f;
+    String rlmType;
 
     public RelevanceModelIId(TrecDocRetriever retriever, QueryObject trecQuery, TopDocs topDocs, WordVecs wvec) throws Exception {
         this.prop = retriever.getProperties();
@@ -69,11 +70,11 @@ public class RelevanceModelIId {
         nterms = Integer.parseInt(prop.getProperty("rlm.qe.nterms", "10"));
         fbweight = Float.parseFloat(prop.getProperty("rlm.qe.newterms.wt", "0.2"));
 
-        String rlmType = prop.getProperty("rlm.type");
+        rlmType = prop.getProperty("rlm.type");
         if ((rlmType.equals("bi") || rlmType.equals("uni"))) {
             wvecs = wvec;
             composer = new QueryVecComposer(trecQuery, wvecs, prop);
-        } 
+        }
     }
 
     public RetrievedDocsTermStats getRetrievedDocsTermStats() {
@@ -100,7 +101,7 @@ public class RelevanceModelIId {
     public void computeFdbkWeights(String rlmMode, HashMap<String, WordVec> wordVecMap) throws Exception {
         float p_q;
         float p_w;
-       
+
         buildTermStats(rlmMode, wordVecMap);
         /* For each w \in V (vocab of top docs),
          * compute f(w) = \sum_{q \in qwvecs} K(w,q) */
@@ -132,7 +133,7 @@ public class RelevanceModelIId {
         }
     }
 
-    public void computeKDE(String retrieveMode, HashMap<String,WordVec> wordVecMap) throws Exception {
+    public void computeKDE(String retrieveMode, HashMap<String, WordVec> wordVecMap) throws Exception {
         float p_q;
         float p_w;
 
@@ -238,17 +239,13 @@ public class RelevanceModelIId {
 
         QueryObject expandedQuery = this.trecQuery;
         HashSet<Term> origTerms = new HashSet<>();
-        //this.trecQuery.luceneQuery.extractTerms(origTerms);
-        Query tempQ= expandedQuery.luceneQuery;
-        String st[] =tempQ.toString().split("\\s+");
-        for(String word: st){
-		try{
-			origTerms.add(new Term(TrecDocIndexer.ALL_STR,word.split(":")[1]));
-		}catch(Exception e){
-			System.out.println(word);
-		}
-        }
-        
+        Query tempQ = expandedQuery.luceneQuery;
+        String st[] = tempQ.toString().split("\\s+");
+        /*for(String word: st){
+            origTerms.add(new Term(TrecDocIndexer.ALL_STR,word.split(":")[1]));
+        }*/
+
+        //expandedQuery.luceneQuery = new BooleanQuery();
         HashMap<String, String> origQueryWordStrings = new HashMap<>();
 
         float normalizationFactor = 0;
@@ -282,7 +279,7 @@ public class RelevanceModelIId {
             //---POST_SIGIR review
             ((BooleanQuery) expandedQuery.luceneQuery).add(tq, BooleanClause.Occur.SHOULD);
         }*/
-           
+
         //expandedQuery.luceneQuery = this.trecQuery.luceneQuery;
         int nTermsAdded = 0;
         for (RetrievedDocTermInfo selTerm : termStats) {
@@ -290,16 +287,19 @@ public class RelevanceModelIId {
             if (nTermsAdded >= nterms) {
                 break;
             }
-            
+
             String thisTerm = selTerm.getTerm();
             if (origQueryWordStrings.get(thisTerm) != null) {
                 continue;
             }
-            
 
             TermQuery tq = new TermQuery(new Term(TrecDocIndexer.ALL_STR, thisTerm));
             ((BooleanQuery) expandedQuery.luceneQuery).add(tq, BooleanClause.Occur.SHOULD);
-            tq.setBoost(fbweight);
+            if (rlmType.equals("rlm_conditional")) {
+                tq.setBoost(fbweight);
+            }else{
+                tq.setBoost(fbweight*selTerm.wt);
+            }
 
             //+++POST_SIGIR review: Assigned weights according to RLM post QE
             //tq.setBoost(fbweight);
@@ -307,7 +307,7 @@ public class RelevanceModelIId {
             //tq.setBoost(selTerm.wt);
             //---POST_SIGIR review
             nTermsAdded++;
-            
+
         }
 
         return expandedQuery;
