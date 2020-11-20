@@ -7,6 +7,7 @@ package org.trusteval.retriever;
 
 import org.trusteval.indexing.TrecDocIndexer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -78,10 +79,6 @@ public class NNQueryExpander {
         Query luceneQry = query.getLuceneQueryObj();
         System.out.println("Composing query: " + luceneQry.toString());
         HashSet<Term> origTerms = new HashSet<>();
-        String st[] =luceneQry.toString().split("\\s+");
-        for(String word: st){
-            origTerms.add(new Term(TrecDocIndexer.ALL_STR,word.split(":")[1]));
-        }
         //luceneQry.extractTerms(origTerms);
         
         // For checking that we are adding new expansion terms
