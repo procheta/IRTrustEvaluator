@@ -271,9 +271,9 @@ public class TRECQueryParser extends DefaultHandler {
         int count = 0;
         while (line != null) {
             String st[] = line.split("\t");
-            String query = analyze(st[0], "stop.txt");
+            String query = analyze(st[1], "stop.txt");
             QueryObject  tq = new QueryObject ();
-            tq.id = String.valueOf(count++);
+            tq.id = st[0];
             String words[] = query.split("\\s+");
             BooleanQuery bq = new BooleanQuery();
             for (String s : words) {
@@ -287,10 +287,10 @@ public class TRECQueryParser extends DefaultHandler {
             tq.luceneQuery = bq;
             
             tqs.add(tq);
-            query = analyze(st[1], "stop.txt");
+            query = analyze(st[3], "stop.txt");
             
             tq = new QueryObject ();
-            tq.id = String.valueOf(count++);
+            tq.id = st[2];
             st = query.split("\\s+");
             bq = new BooleanQuery();
             for (String s : st) {
