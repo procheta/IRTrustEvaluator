@@ -685,9 +685,9 @@ public class Evaluator {
         HashMap<String, ArrayList<String>> idMap = new HashMap<>();
         while (line != null) {
             String st[] = line.split("\t");
-            String pair1 = String.valueOf(count++);
-            String pair2 = String.valueOf(count++);
-            QueryPair qp = new QueryPair(pair1, pair2, st[2]);
+            String pair1 = st[0];
+            String pair2 = st[2];
+            QueryPair qp = new QueryPair(pair1, pair2, st[4]);
             queryPairs.add(qp);
             line = br.readLine();
         }
