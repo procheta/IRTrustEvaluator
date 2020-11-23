@@ -90,6 +90,22 @@
          </execution>
      </executions>
     </plugin>
+     <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+    <artifactId>exec-maven-plugin</artifactId>
+    <version>1.6.0</version>
+    <executions>
+        <execution>
+            <id>preprocess</id>
+            <goals>
+                <goal>java</goal>
+            </goals>
+             <configuration>
+                <mainClass>org.trusteval.evaluator.Preprocessing</mainClass>
+            </configuration>
+         </execution>
+     </executions>
+    </plugin>
     </plugins>
     </pluginManagement>
 </build>       
