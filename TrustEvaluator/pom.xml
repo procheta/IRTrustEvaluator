@@ -88,13 +88,6 @@
                 <mainClass>org.trusteval.retriever.TrecDocRetriever</mainClass>
             </configuration>
          </execution>
-     </executions>
-    </plugin>
-     <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-    <artifactId>exec-maven-plugin</artifactId>
-    <version>1.6.0</version>
-    <executions>
         <execution>
             <id>preprocess</id>
             <goals>
@@ -105,8 +98,7 @@
             </configuration>
          </execution>
      </executions>
-    </plugin>
-    </plugins>
+    </plugin>    </plugins>
     </pluginManagement>
 </build>       
 </project>        
