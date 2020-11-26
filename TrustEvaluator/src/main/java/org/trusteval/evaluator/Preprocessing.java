@@ -48,15 +48,17 @@ public class Preprocessing {
 
     }
 
-    public void prepareDocFile() throws IOException {
+    public void prepareDocFile() throws Exception {
 
         FileWriter fw = new FileWriter(new File(prop.getProperty("docFile")));
         BufferedWriter bw = new BufferedWriter(fw);
-        for (int i = 0; i < reader.numDocs(); i++) {
+        TRECQueryParser tp = new TRECQueryParser();
+	for (int i = 0; i < reader.numDocs(); i++) {
             Document doc = reader.document(i);
             String id = doc.get("id");
             String words = doc.get("words");
-            bw.write(id + "\t" + words);
+            words=tp.analyze(words, "stop.txt");
+	    bw.write(id + "\t" + words);
             bw.newLine();
         }
 
@@ -96,21 +98,20 @@ public class Preprocessing {
 
             TopDocs tdocs = searcher.search(q.getLuceneQueryObj(), 2000);
             for(int i1 = 0; i1< tdocs.scoreDocs.length; i1++){
-                Document doc = reader.document(tdocs.scoreDocs[i].doc);
-                bw.write(q.id+ "\t"+ doc.get("title")+ "\t"+ doc.get("words"));
+                Document doc = reader.document(tdocs.scoreDocs[i1].doc);
+                bw.write(q.id+ "\t"+ doc.get("id")+ "\t"+ String.valueOf(tdocs.scoreDocs[i1].score));
                 bw.newLine();
             }
-            bw.close();
         }
-
+	bw.close();
     }
 
     public static void main(String[] args) throws Exception {
 
         Preprocessing pp = new Preprocessing("retrieve.properties");
         //pp.prepareDocFile();
-       // pp.prpareTopicFile();
-       pp.preparePreRankedFile();
+         //pp.prpareTopicFile();
+        pp.preparePreRankedFile();
 
     }
 
