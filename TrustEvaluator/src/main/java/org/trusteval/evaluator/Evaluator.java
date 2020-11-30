@@ -508,7 +508,7 @@ class AllRetrievedResults {
 
         while (line != null) {
             bw.write(line);
-            String docId = line.split(" ")[2];
+            String docId = line.split("\t")[2];
             System.out.println(docId);
             IndexSearcher searcher = new IndexSearcher(reader);
             TermQuery tq = new TermQuery(new Term("id", docId));
