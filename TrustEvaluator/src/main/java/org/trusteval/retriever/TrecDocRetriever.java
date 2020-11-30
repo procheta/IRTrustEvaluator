@@ -201,13 +201,14 @@ public class TrecDocRetriever {
             wvec = new WordVecs(prop);
         }
         int count = 0;
-
+          System.out.println("Num of terms  "+ prop.getProperty("rlm.qe.nterms"));
+            System.out.println("feddback weight  "+ prop.getProperty("rlm.qe.newterms.wt"));
         for (QueryObject query : queries) {
 
             // Print query
             if (debugMode) {
                 if (count == 6) {
-                    //continue;
+                    continue;
                 }
                 System.out.println("Executing query: " + query.id + " " + query);
 
@@ -221,7 +222,7 @@ public class TrecDocRetriever {
                 topDocs = applyFeedback(query, topDocs, wvec);
             }
             // Save results
-            //System.out.println("Num topdocs "+ topDocs.totalHits);
+          
             saveRetrievedTuples(fw, query, topDocs);
 
             if (debugMode) {
@@ -281,7 +282,7 @@ public class TrecDocRetriever {
 
     public void evaluate(String evalMode) throws Exception {
         Evaluator evaluator = new Evaluator(this.getProperties());
-        evaluator.load(evalMode, debugMode);
+        evaluator.load(evalMode, debugMode,"");
         String collection = prop.getProperty("collection");
         if (evalMode.equals("trust")) {
             if (collection.equals("Trec")) {
