@@ -642,6 +642,10 @@ public class Evaluator {
         graded = true;
         threshold = 1;
     }
+    
+    public void setQuerypairsFile(String fileName){
+    this.queryPairFile = fileName;
+    }
 
     public Evaluator(Properties prop) throws IOException, IOException {
         String qrelsFile = prop.getProperty("qrels.file");
@@ -762,6 +766,7 @@ public class Evaluator {
 
             Evaluator evaluator = new Evaluator(qrelsFile, resFile, prop.getProperty("index"));
             evaluator.load("trust",null, prop.getProperty("resultNew"));
+            evaluator.setQuerypairsFile(prop.getProperty("querypairs.file"));
              evaluator.loadQueryPairsTREC();
             evaluator.fillRelInfo("trust");
             System.out.println(evaluator.computeTrust());
