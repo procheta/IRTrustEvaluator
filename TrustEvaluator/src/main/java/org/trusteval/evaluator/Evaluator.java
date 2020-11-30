@@ -762,7 +762,7 @@ public class Evaluator {
 
             Evaluator evaluator = new Evaluator(qrelsFile, resFile, prop.getProperty("index"));
             evaluator.load("trust",null, prop.getProperty("resultNew"));
-           
+             evaluator.loadQueryPairsTREC();
             evaluator.fillRelInfo("trust");
             System.out.println(evaluator.computeTrust());
         } catch (Exception ex) {
