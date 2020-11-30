@@ -727,7 +727,7 @@ public class Evaluator {
             Evaluator evaluator = new Evaluator(qrelsFile, resFile);
             evaluator.load("trust", null);
             evaluator.fillRelInfo("trust");
-            System.out.println(evaluator.computeAll());
+            System.out.println(evaluator.computeTRust());
         } catch (Exception ex) {
             ex.printStackTrace();
         }
