@@ -6,8 +6,11 @@ package org.trusteval.evaluator;
 
 import java.io.BufferedReader;
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -20,6 +23,10 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.TreeMap;
 import org.apache.lucene.index.*;
+import org.apache.lucene.search.IndexSearcher;
+import org.apache.lucene.search.TermQuery;
+import org.apache.lucene.search.TopDocs;
+import org.apache.lucene.store.FSDirectory;
 import org.trusteval.trec.TRECQueryParser;
 
 /**
@@ -461,9 +468,11 @@ class AllRetrievedResults {
     AllRelRcds allRelInfo;
     IndexReader reader;
 
-    public AllRetrievedResults(String resFile) {
+    public AllRetrievedResults(String resFile, String indexPath) throws IOException {
         this.resFile = resFile;
         allRetMap = new TreeMap<>();
+        File indexDir = new File(indexPath);
+        reader = DirectoryReader.open(FSDirectory.open(indexDir.toPath()));
     }
 
     public void load(String evalMode, Boolean debugMode) {
@@ -489,6 +498,30 @@ class AllRetrievedResults {
         res.addTuple(tokens[2], Integer.parseInt(tokens[3]), tokens[6], evalMode);
     }
 
+    public void updateResultFile(String fileName) throws FileNotFoundException, IOException {
+        FileReader fr = new FileReader(new File(resFile));
+        BufferedReader br = new BufferedReader(fr);
+
+        FileWriter fw = new FileWriter(new File(fileName));
+        BufferedWriter bw = new BufferedWriter(fw);
+        String line = br.readLine();
+
+        while (line != null) {
+            bw.write(line);
+            String docId = line.split(" ")[2];
+            System.out.println(docId);
+            IndexSearcher searcher = new IndexSearcher(reader);
+            TermQuery tq = new TermQuery(new Term("id", docId));
+            TopDocs tdocs = searcher.search(tq, 1);
+            String content = reader.document(tdocs.scoreDocs[0].doc).get("words");
+            bw.write("\t" + content);
+            bw.newLine();
+            line = br.readLine();
+        }
+        resFile = fileName;
+        bw.close();
+    }
+
     public String toString() {
         StringBuffer buff = new StringBuffer();
         for (Map.Entry<String, RetrievedResults> e : allRetMap.entrySet()) {
@@ -502,7 +535,7 @@ class AllRetrievedResults {
         for (Map.Entry<String, RetrievedResults> e : allRetMap.entrySet()) {
             RetrievedResults res = e.getValue();
             PerQueryRelDocs thisRelInfo = null;
-            
+
             if (evalMode.equals("trust")) {
                 thisRelInfo = relInfo.getRelInfo(String.valueOf(res.qid));
             } else {
@@ -512,8 +545,8 @@ class AllRetrievedResults {
 
             if (thisRelInfo != null) {
                 res.fillRelInfo(thisRelInfo);
-            }else{
-                System.out.println("Qid Not Found "+res.qid);
+            } else {
+                System.out.println("Qid Not Found " + res.qid);
             }
         }
         this.allRelInfo = relInfo;
@@ -603,14 +636,14 @@ public class Evaluator {
     ArrayList<QueryPair> queryPairs;
     String queryPairFile;
 
-    public Evaluator(String qrelsFile, String resFile) {
+    public Evaluator(String qrelsFile, String resFile, String indexPath) throws IOException {
         relRcds = new AllRelRcds(qrelsFile);
-        retRcds = new AllRetrievedResults(resFile);
+        retRcds = new AllRetrievedResults(resFile, indexPath);
         graded = true;
         threshold = 1;
     }
 
-    public Evaluator(Properties prop) {
+    public Evaluator(Properties prop) throws IOException, IOException {
         String qrelsFile = prop.getProperty("qrels.file");
         String resFile = prop.getProperty("res.file");
         graded = Boolean.parseBoolean(prop.getProperty("evaluate.graded", "false"));
@@ -620,12 +653,15 @@ public class Evaluator {
             threshold = 1;
         }
         relRcds = new AllRelRcds(qrelsFile);
-        retRcds = new AllRetrievedResults(resFile);
+        retRcds = new AllRetrievedResults(resFile, prop.getProperty("index"));
         queryPairFile = prop.getProperty("querypairs.file");
     }
 
-    public void load(String evalMode, Boolean debugMode) throws Exception {
+    public void load(String evalMode, Boolean debugMode, String fileName) throws Exception {
         relRcds.load();
+        if (evalMode.equals("trust")) {
+            retRcds.updateResultFile(fileName);
+        }
         retRcds.load(evalMode, debugMode);
     }
 
@@ -724,8 +760,9 @@ public class Evaluator {
             String qrelsFile = prop.getProperty("qrels.file");
             String resFile = prop.getProperty("res.file");
 
-            Evaluator evaluator = new Evaluator(qrelsFile, resFile);
-            evaluator.load("trust", null);
+            Evaluator evaluator = new Evaluator(qrelsFile, resFile, prop.getProperty("index"));
+            evaluator.load("trust",null, prop.getProperty("resultNew"));
+           
             evaluator.fillRelInfo("trust");
             System.out.println(evaluator.computeTrust());
         } catch (Exception ex) {
