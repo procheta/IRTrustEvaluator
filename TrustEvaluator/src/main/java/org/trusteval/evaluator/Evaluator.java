@@ -715,7 +715,7 @@ public class Evaluator {
     public static void main(String[] args) {
         if (args.length < 1) {
             args = new String[1];
-            args[0] = "init.properties";
+            args[0] = "retrieve.properties";
         }
         try {
             Properties prop = new Properties();
@@ -727,7 +727,7 @@ public class Evaluator {
             Evaluator evaluator = new Evaluator(qrelsFile, resFile);
             evaluator.load("trust", null);
             evaluator.fillRelInfo("trust");
-            System.out.println(evaluator.computeTRust());
+            System.out.println(evaluator.computeTrust());
         } catch (Exception ex) {
             ex.printStackTrace();
         }
