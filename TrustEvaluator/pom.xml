@@ -97,6 +97,15 @@
                 <mainClass>org.trusteval.evaluator.Preprocessing</mainClass>
             </configuration>
          </execution>
+         <execution>
+            <id>evaluator</id>
+            <goals>
+                <goal>java</goal>
+            </goals>
+             <configuration>
+                <mainClass>org.trusteval.evaluator.Evaluator</mainClass>
+            </configuration>
+         </execution>
      </executions>
     </plugin>    </plugins>
     </pluginManagement>

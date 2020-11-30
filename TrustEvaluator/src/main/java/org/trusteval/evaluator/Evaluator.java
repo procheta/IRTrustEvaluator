@@ -502,6 +502,7 @@ class AllRetrievedResults {
         for (Map.Entry<String, RetrievedResults> e : allRetMap.entrySet()) {
             RetrievedResults res = e.getValue();
             PerQueryRelDocs thisRelInfo = null;
+            
             if (evalMode.equals("trust")) {
                 thisRelInfo = relInfo.getRelInfo(String.valueOf(res.qid));
             } else {
@@ -511,6 +512,8 @@ class AllRetrievedResults {
 
             if (thisRelInfo != null) {
                 res.fillRelInfo(thisRelInfo);
+            }else{
+                System.out.println("Qid Not Found "+res.qid);
             }
         }
         this.allRelInfo = relInfo;
@@ -722,8 +725,8 @@ public class Evaluator {
             String resFile = prop.getProperty("res.file");
 
             Evaluator evaluator = new Evaluator(qrelsFile, resFile);
-            evaluator.load("", null);
-            evaluator.fillRelInfo("");
+            evaluator.load("trust", null);
+            evaluator.fillRelInfo("trust");
             System.out.println(evaluator.computeAll());
         } catch (Exception ex) {
             ex.printStackTrace();
