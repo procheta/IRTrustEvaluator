@@ -33,6 +33,29 @@ import org.trusteval.trec.TRECQueryParser;
  *
  * @author Debasis
  */
+class perTopicDoc implements Comparable<perTopicDoc> {
+
+    public String docName;
+    public double score;
+
+    public perTopicDoc(String docName, double score) {
+        this.docName = docName;
+        this.score = score;
+    }
+
+    @Override
+    public int compareTo(perTopicDoc o) {
+        if (score > o.score) {
+            return 1;
+        } else if (score < o.score) {
+            return -1;
+        } else {
+            return 0;
+        }
+    }
+
+}
+
 class QueryPair {
 
     String query1;
@@ -509,7 +532,6 @@ class AllRetrievedResults {
         while (line != null) {
             bw.write(line);
             String docId = line.split("\t")[2];
-            System.out.println(docId);
             IndexSearcher searcher = new IndexSearcher(reader);
             TermQuery tq = new TermQuery(new Term("id", docId));
             TopDocs tdocs = searcher.search(tq, 1);
@@ -642,9 +664,9 @@ public class Evaluator {
         graded = true;
         threshold = 1;
     }
-    
-    public void setQuerypairsFile(String fileName){
-    this.queryPairFile = fileName;
+
+    public void setQuerypairsFile(String fileName) {
+        this.queryPairFile = fileName;
     }
 
     public Evaluator(Properties prop) throws IOException, IOException {
@@ -752,6 +774,43 @@ public class Evaluator {
         return buff.toString();
     }
 
+    public void prepareTrecEvalFile(String drmmOutput, String resultFile) throws FileNotFoundException, IOException {
+        FileReader fr = new FileReader(new File(drmmOutput));
+        BufferedReader br = new BufferedReader(fr);
+
+        FileWriter fw = new FileWriter(new File(resultFile));
+        BufferedWriter bw = new BufferedWriter(fw);
+
+        String line = br.readLine();
+        HashMap<String, ArrayList<perTopicDoc>> docMap = new HashMap<>();
+        ArrayList<perTopicDoc> ptArray = new ArrayList<>();
+        String prevTopic = "";
+        while (line != null) {
+            String st[] = line.split(" ");
+            perTopicDoc pt = new perTopicDoc(st[1], Double.parseDouble(st[2]));
+            if (prevTopic.equals(st[0])) {
+                ptArray.add(pt);
+            } else {
+                Collections.sort(ptArray, Collections.reverseOrder());
+                docMap.put(st[0], ptArray);
+                ptArray = new ArrayList<>();
+                ptArray.add(pt);
+            }
+            prevTopic = st[0];
+            line = br.readLine();
+        }
+        Iterator it = docMap.keySet().iterator();
+        while(it.hasNext()){
+            String id = (String) it.next();
+            ArrayList<perTopicDoc> pt = docMap.get(id);
+            for(perTopicDoc ptt: pt){
+              bw.write(id+ "\t"+"0"+"\t"+ ptt.docName+ "\t"+ptt.score);
+              bw.newLine();
+            }
+        }
+        bw.close();
+    }
+
     public static void main(String[] args) {
         if (args.length < 1) {
             args = new String[1];
@@ -765,7 +824,8 @@ public class Evaluator {
             String resFile = prop.getProperty("res.file");
 
             Evaluator evaluator = new Evaluator(qrelsFile, resFile, prop.getProperty("index"));
-            evaluator.load("trust",null, prop.getProperty("resultNew"));
+            evaluator.prepareTrecEvalFile( prop.getProperty("drmm.output"), resFile);
+            evaluator.load("trust",false, prop.getProperty("resultNew"));
             evaluator.setQuerypairsFile(prop.getProperty("querypairs.file"));
              evaluator.loadQueryPairsTREC();
             evaluator.fillRelInfo("trust");
