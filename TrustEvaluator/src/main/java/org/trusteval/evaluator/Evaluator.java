@@ -518,6 +518,7 @@ class AllRetrievedResults {
             res = new RetrievedResults(qid, "", debugMode);
             allRetMap.put(qid, res);
         }
+
         res.addTuple(tokens[2], Integer.parseInt(tokens[3]), tokens[6], evalMode);
     }
 
@@ -688,7 +689,9 @@ public class Evaluator {
         if (evalMode.equals("trust")) {
             retRcds.updateResultFile(fileName);
         }
+
         retRcds.load(evalMode, debugMode);
+
     }
 
     public void fillRelInfo(String evalMode) {
@@ -756,6 +759,7 @@ public class Evaluator {
             queryPairs.add(qp);
             line = br.readLine();
         }
+        System.out.println();
     }
 
     public String computeAll() {
@@ -792,20 +796,25 @@ public class Evaluator {
                 ptArray.add(pt);
             } else {
                 Collections.sort(ptArray, Collections.reverseOrder());
-                docMap.put(st[0], ptArray);
+                if (ptArray.size() > 0) {
+                    docMap.put(prevTopic, ptArray);
+                }
                 ptArray = new ArrayList<>();
                 ptArray.add(pt);
             }
             prevTopic = st[0];
+
             line = br.readLine();
         }
+        docMap.put(prevTopic, ptArray);
         Iterator it = docMap.keySet().iterator();
-        while(it.hasNext()){
+        while (it.hasNext()) {
             String id = (String) it.next();
             ArrayList<perTopicDoc> pt = docMap.get(id);
-            for(perTopicDoc ptt: pt){
-              bw.write(id+ "\t"+"0"+"\t"+ ptt.docName+ "\t"+ptt.score);
-              bw.newLine();
+            int count = 1;
+            for (perTopicDoc ptt : pt) {
+                bw.write(id + "\t" + "0" + "\t" + ptt.docName + "\t" + String.valueOf(count++) + "\t" + ptt.score + "\t" + "DRMM");
+                bw.newLine();
             }
         }
         bw.close();
@@ -824,11 +833,10 @@ public class Evaluator {
             String resFile = prop.getProperty("res.file");
 
             Evaluator evaluator = new Evaluator(qrelsFile, resFile, prop.getProperty("index"));
-            evaluator.prepareTrecEvalFile( prop.getProperty("drmm.output"), resFile);
-            evaluator.load("trust",false, prop.getProperty("resultNew"));
+            evaluator.prepareTrecEvalFile(prop.getProperty("drmm.output"), resFile);
+            evaluator.load("trust", false, prop.getProperty("resultNew"));
             evaluator.setQuerypairsFile(prop.getProperty("querypairs.file"));
-             evaluator.loadQueryPairsTREC();
-            evaluator.fillRelInfo("trust");
+            evaluator.loadQueryPairsTREC();
             System.out.println(evaluator.computeTrust());
         } catch (Exception ex) {
             ex.printStackTrace();
