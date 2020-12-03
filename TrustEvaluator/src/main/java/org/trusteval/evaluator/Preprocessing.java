@@ -48,28 +48,53 @@ public class Preprocessing {
 
     }
 
-    public void prepareDocFile() throws Exception {
+    public void prepareDocFile() throws IOException, FileNotFoundException, Exception {
 
         FileWriter fw = new FileWriter(new File(prop.getProperty("docFile")));
         BufferedWriter bw = new BufferedWriter(fw);
-        TRECQueryParser tp = new TRECQueryParser();
-	for (int i = 0; i < reader.numDocs(); i++) {
-            Document doc = reader.document(i);
-            String id = doc.get("id");
-            String words = doc.get("words");
-            words=tp.analyze(words, "stop.txt");
-	    bw.write(id + "\t" + words);
-            bw.newLine();
-        }
+        String queryFile = prop.getProperty("query.file");
+        String collection = prop.getProperty("collection");
+        List<QueryObject> queries = null;
+        TRECQueryParser parser = new TRECQueryParser(queryFile, indexer.getAnalyzer(), false, prop.getProperty("fieldName"));
 
+        if (collection.equals("MSMARCO")) {
+            queries = parser.loadMSMarcoQueries(queryFile, prop);
+            for (int i = 0; i < queries.size(); i++) {
+                QueryObject q = queries.get(i);
+                TopDocs tdocs = searcher.search(q.getLuceneQueryObj(), 2000);
+                for (int i1 = 0; i1 < tdocs.scoreDocs.length; i1++) {
+                    Document doc = reader.document(tdocs.scoreDocs[i1].doc);
+                    bw.write(doc.get("id") + "\t" + parser.analyze(doc.get("words"),"stop.txt"));
+                    bw.newLine();
+                }
+            }
+        } else {
+
+            for (int i = 0; i < reader.numDocs(); i++) {
+                Document doc = reader.document(i);
+                String id = doc.get("id");
+                String words = doc.get("words");
+                bw.write(id + "\t" + words);
+                bw.newLine();
+            }
+        }
         bw.close();
     }
 
     public void prpareTopicFile() throws FileNotFoundException, Exception {
         String queryFile = prop.getProperty("query.file");
         TRECQueryParser parser = new TRECQueryParser(queryFile, indexer.getAnalyzer(), false, prop.getProperty("fieldName"));
-        parser.parse();
-        List<QueryObject> queries = parser.getQueries();
+        String collection = prop.getProperty("collection");
+        List<QueryObject> queries = null;
+
+        if (collection.equals("MSMARCO")) {
+            queries = parser.loadMSMarcoQueries(queryFile, prop);
+        } else if (collection.equals("TREC")) {
+            queries = parser.findQueries(queryFile, prop);
+        } else {
+            parser.parse();
+            queries = parser.getQueries();
+        }
 
         FileWriter fw = new FileWriter(new File(prop.getProperty("topicFile")));
         BufferedWriter bw = new BufferedWriter(fw);
@@ -87,30 +112,38 @@ public class Preprocessing {
 
         String queryFile = prop.getProperty("query.file");
         TRECQueryParser parser = new TRECQueryParser(queryFile, indexer.getAnalyzer(), false, prop.getProperty("fieldName"));
-        parser.parse();
-        List<QueryObject> queries = parser.getQueries();
+        String collection = prop.getProperty("collection");
+        List<QueryObject> queries = null;
 
+        if (collection.equals("MSMARCO")) {
+            queries = parser.loadMSMarcoQueries(queryFile, prop);
+        } else if (collection.equals("TREC")) {
+            queries = parser.findQueries(queryFile, prop);
+        } else {
+            parser.parse();
+            queries = parser.getQueries();
+        }
         FileWriter fw = new FileWriter(new File(prop.getProperty("preRankedFile")));
         BufferedWriter bw = new BufferedWriter(fw);
         int count = 0;
         for (int i = 0; i < queries.size(); i++) {
             QueryObject q = queries.get(i);
 
-            TopDocs tdocs = searcher.search(q.getLuceneQueryObj(), 2000);
-            for(int i1 = 0; i1< tdocs.scoreDocs.length; i1++){
+            TopDocs tdocs = searcher.search(q.getLuceneQueryObj(), 1000);
+            for (int i1 = 0; i1 < tdocs.scoreDocs.length; i1++) {
                 Document doc = reader.document(tdocs.scoreDocs[i1].doc);
-                bw.write(q.id+ "\t"+ doc.get("id")+ "\t"+ String.valueOf(tdocs.scoreDocs[i1].score));
+                bw.write(q.id + "\t" + doc.get("id") + "\t" + String.valueOf(tdocs.scoreDocs[i1].score));
                 bw.newLine();
             }
         }
-	bw.close();
+        bw.close();
     }
 
     public static void main(String[] args) throws Exception {
 
         Preprocessing pp = new Preprocessing("retrieve.properties");
-        //pp.prepareDocFile();
-         //pp.prpareTopicFile();
+        pp.prepareDocFile();
+        pp.prpareTopicFile();
         pp.preparePreRankedFile();
 
     }
