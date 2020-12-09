@@ -98,6 +98,15 @@
             </configuration>
          </execution>
          <execution>
+            <id>preprocessDRMM</id>
+            <goals>
+                <goal>java</goal>
+            </goals>
+             <configuration>
+                <mainClass>org.trusteval.MSMARCO_DRMM.DRMMPreprocessing</mainClass>
+            </configuration>
+         </execution>
+         <execution>
             <id>evaluator</id>
             <goals>
                 <goal>java</goal>
