@@ -356,23 +356,20 @@ class RetrievedResults implements Comparable<RetrievedResults> {
         return (1 - computeJaccard(rtuple2));
     }
 
-    public HashMap<String, Double> computeWordDistribution(ArrayList<String> contentArray) {
+    public HashMap<String, Double> computeWordDistribution(String content) {
 
         HashMap<String, Double> wordCountMap = new HashMap<String, Double>();
         double totalSumFreq = 0;
-        for (int i = 0; i < contentArray.size(); i++) {
-            String content = contentArray.get(i);
-            String words[] = content.split("\\s+");
-            totalSumFreq += words.length;
-            for (String word : words) {
-                if (wordCountMap.containsKey(word)) {
-                    wordCountMap.put(word, wordCountMap.get(word) + 1);
-                } else {
-                    wordCountMap.put(word, 1.0);
-                }
+
+        String words[] = content.split("\\s+");
+        totalSumFreq += words.length;
+        for (String word : words) {
+            if (wordCountMap.containsKey(word)) {
+                wordCountMap.put(word, wordCountMap.get(word) + 1);
+            } else {
+                wordCountMap.put(word, 1.0);
             }
         }
-
         Iterator it = wordCountMap.keySet().iterator();
         double n = wordCountMap.size();
 
@@ -387,44 +384,58 @@ class RetrievedResults implements Comparable<RetrievedResults> {
         return wordCountMap;
     }
 
-    public double computeKLDivergence(HashMap<String, Double> wordCountMap1, HashMap<String, Double> wordCountMap2) {
+    public double computeCosineSim(HashMap<String, Double> wordCountMap1, HashMap<String, Double> wordCountMap2) {
 
         Iterator it = wordCountMap1.keySet().iterator();
-        double kldiv = 0;
-
+        double sim = 0;
+        double length1 = 0;
         while (it.hasNext()) {
             String key = (String) it.next();
             if (wordCountMap2.containsKey(key)) {
-                kldiv += wordCountMap1.get(key) * Math.log(wordCountMap1.get(key) / wordCountMap2.get(key));
+                sim += wordCountMap1.get(key) * wordCountMap2.get(key);
                 //
             }
         }
-        return kldiv;
+        return sim;
     }
 
     double computeOverlap(RetrievedResults rtuple2) throws Exception {
 
-        ArrayList<String> contentArray = new ArrayList<>();
+        ArrayList<HashMap<String, Double>> wordDistributionArray1 = new ArrayList<>();
+        ArrayList<String> docNames = new ArrayList<>();
         TRECQueryParser tqp = new TRECQueryParser();
         for (int i = 0; i < rtuples.size(); i++) {
             String docid = rtuples.get(i).docName;
+            docNames.add(docid);
             String content = rtuples.get(i).content;
             content = tqp.analyze(content, "stop.txt");
-            contentArray.add(content);
+            wordDistributionArray1.add(computeWordDistribution(content));
         }
-        HashMap<String, Double> wordCountMap1 = computeWordDistribution(contentArray);
-        //System.out.println(wordCountMap1);
 
-        contentArray = new ArrayList<>();
+        ArrayList<HashMap<String, Double>> wordDistributionArray2 = new ArrayList<>();
+        int numOverlap=0;
         for (int i = 0; i < rtuple2.rtuples.size(); i++) {
             String docid = rtuple2.rtuples.get(i).docName;
+            if(docNames.contains(docid))
+                numOverlap++;
             String content = rtuple2.rtuples.get(i).content;
-            contentArray.add(content);
+            wordDistributionArray2.add(computeWordDistribution(content));
         }
-        HashMap<String, Double> wordCountMap2 = computeWordDistribution(contentArray);
-        //System.out.println(wordCountMap1);
-        double kldiv = computeKLDivergence(wordCountMap1, wordCountMap2);
-        return kldiv;
+        double simSum = 0;
+        for (int i = 0; i < wordDistributionArray1.size(); i++) {
+
+            double max = 0;
+            HashMap<String, Double> map1 = wordDistributionArray1.get(i);
+            for (int j = 0; j < wordDistributionArray2.size(); j++) {
+                HashMap<String, Double> map2 = wordDistributionArray1.get(j);
+                double sim = computeCosineSim(map1, map2);
+                if (max < sim) {
+                    max = sim;
+                }
+            }
+            simSum += max;
+        }
+        return simSum/(wordDistributionArray1.size()+wordDistributionArray2.size()-numOverlap);
     }
 
     public double computeInverseOverlap(RetrievedResults rtuple2) throws Exception {
@@ -788,19 +799,25 @@ public class Evaluator {
         String line = br.readLine();
         HashMap<String, ArrayList<perTopicDoc>> docMap = new HashMap<>();
         ArrayList<perTopicDoc> ptArray = new ArrayList<>();
+        HashSet<String> docSet = new HashSet<>();
         String prevTopic = "";
         while (line != null) {
             String st[] = line.split(" ");
             perTopicDoc pt = new perTopicDoc(st[1], Double.parseDouble(st[2]));
             if (prevTopic.equals(st[0])) {
-                ptArray.add(pt);
+                if (!docSet.contains(st[1])) {
+                    ptArray.add(pt);
+                    docSet.add(st[1]);
+                }
             } else {
                 Collections.sort(ptArray, Collections.reverseOrder());
+                docSet = new HashSet<>();
                 if (ptArray.size() > 0) {
                     docMap.put(prevTopic, ptArray);
                 }
                 ptArray = new ArrayList<>();
                 ptArray.add(pt);
+                docSet.add(st[1]);
             }
             prevTopic = st[0];
 
@@ -820,6 +837,59 @@ public class Evaluator {
         bw.close();
     }
 
+    public void prepareTrippleFile(String file1, String file2) throws FileNotFoundException, IOException {
+
+        FileReader fr = new FileReader(new File(file1));
+        BufferedReader br = new BufferedReader(fr);
+
+        FileWriter fw = new FileWriter(new File(file2));
+        BufferedWriter bw = new BufferedWriter(fw);
+
+        String line = br.readLine();
+        HashMap<String, ArrayList<String>> positive = new HashMap<>();
+        HashMap<String, ArrayList<String>> negative = new HashMap<>();
+
+        String prevTopic = "";
+        while (line != null) {
+            String st[] = line.split("\\s+");
+            ArrayList<String> pid = positive.get(st[0]);
+            ArrayList<String> nid = negative.get(st[0]);
+
+            if (pid != null) {
+                if (!pid.contains(st[1])) {
+                    bw.write(st[0] + "\tq0\t" + st[1] + "\t" + "1");
+                    bw.newLine();
+                    pid.add(st[1]);
+                    positive.put(st[0], pid);
+                }
+            }
+            if (nid != null) {
+                if (!nid.contains(st[2])) {
+                    bw.write(st[0] + "\tq0\t" + st[2] + "\t" + "0");
+                    bw.newLine();
+                    nid.add(st[1]);
+                    negative.put(st[0], nid);
+                }
+            }
+            if (pid == null) {
+                pid = new ArrayList<>();
+                pid.add(st[1]);
+                positive.put(st[0], pid);
+                bw.write(st[0] + "\tq0\t" + st[1] + "\t" + "1");
+                bw.newLine();
+            }
+            if (nid == null) {
+                nid = new ArrayList<>();
+                nid.add(st[1]);
+                negative.put(st[0], nid);
+                bw.write(st[0] + "\tq0\t" + st[2] + "\t" + "0");
+                bw.newLine();
+            }
+            line = br.readLine();
+        }
+        bw.close();
+    }
+
     public static void main(String[] args) {
         if (args.length < 1) {
             args = new String[1];
@@ -833,11 +903,12 @@ public class Evaluator {
             String resFile = prop.getProperty("res.file");
 
             Evaluator evaluator = new Evaluator(qrelsFile, resFile, prop.getProperty("index"));
-            evaluator.prepareTrecEvalFile(prop.getProperty("drmm.output"), resFile);
-            evaluator.load("trust", false, prop.getProperty("resultNew"));
-            evaluator.setQuerypairsFile(prop.getProperty("querypairs.file"));
-            evaluator.loadQueryPairsTREC();
-            System.out.println(evaluator.computeTrust());
+            evaluator.prepareTrecEvalFile("C:\\Users\\Procheta\\Downloads/drmm.result1", "C:\\Users\\Procheta\\Downloads/res1.txt");
+            //evaluator.prepareTrippleFile("C:\\Users\\Procheta\\Downloads/tripple.txt", "C:\\Users\\Procheta\\Downloads/qrel_tripple.txt");
+            //evaluator.load("trust", false, prop.getProperty("resultNew"));
+            //evaluator.setQuerypairsFile(prop.getProperty("querypairs.file"));
+            //evaluator.loadQueryPairsTREC();
+            // System.out.println(evaluator.computeTrust());
         } catch (Exception ex) {
             ex.printStackTrace();
         }
