@@ -1,6 +1,0 @@
-301-1-1;organizations international criminal activity
-301-2-1;international criminal organizations
-301-3-1;international organized crime
-301-4-1;international crime groups
-301-4-2;international drug trades crime group in south america
-301-4-3;international smuggling group
