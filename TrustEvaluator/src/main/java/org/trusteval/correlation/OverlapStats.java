@@ -1,4 +1,4 @@
-package org.correlation;
+package org.trusteval.correlation;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.lucene.search.ScoreDoc;
